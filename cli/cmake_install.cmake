@@ -1,4 +1,4 @@
-# Install script for directory: /home/agedboy/dev/calc/com
+# Install script for directory: /home/agedboy/dev/calc/cli
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

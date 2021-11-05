@@ -1,8 +1,7 @@
 file(REMOVE_RECURSE
+  "../bin/svr"
+  "../bin/svr.pdb"
   "CMakeFiles/svr.dir/calcsvr.cpp.o"
-  "CMakeFiles/svr.dir/calcsvr.cpp.o.d"
-  "svr"
-  "svr.pdb"
 )
 
 # Per-language clean rules from dependency scanning.

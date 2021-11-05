@@ -12,11 +12,14 @@
 #include "server.hpp"
 
 StreamServerHandler::StreamServerHandler(int peer) : peer(peer) {
-    std::thread(&StreamServerHandler::handlerFunc, this);
 }
 
 StreamServerHandler::~StreamServerHandler() {
     close(peer);
+}
+
+void StreamServerHandler::start(void) {
+    std::thread([this]() { handlerFunc(); }).detach();
 }
 
 void SimpleHandler::handlerFunc(void) const {
@@ -37,7 +40,7 @@ void SimpleHandler::handlerFunc(void) const {
         handleRequest(request, response);
 
         h.version = 1;
-        h.version = response.size();
+        h.bodyLength = response.size();
         if(send(peer, &h, sizeof(h), 0) == 0) {
             break;
         }
@@ -50,10 +53,7 @@ void SimpleHandler::handlerFunc(void) const {
     delete this;
 }
 
-StreamServer::StreamServer(unsigned short port, HandlerFactory createHandler) : sock(-1), createHandler(createHandler) {
-    char portStr[6];
-    sprintf(portStr, "%d", port);
-
+StreamServer::StreamServer(const std::string &serivce, HandlerFactory createHandler) : sock(-1), stopping(false), createHandler(createHandler) {
     int err;
 
     struct addrinfo req = {0};
@@ -62,7 +62,7 @@ StreamServer::StreamServer(unsigned short port, HandlerFactory createHandler) : 
     req.ai_flags = AI_PASSIVE;
 
     struct addrinfo *addrList;
-    if ((err = getaddrinfo(NULL, portStr, &req, &addrList)) != 0) {
+    if ((err = getaddrinfo(NULL, serivce.c_str(), &req, &addrList)) != 0) {
         throw std::runtime_error(gai_strerror(err));
     }
 
@@ -97,9 +97,9 @@ void StreamServer::online(void) {
     assert(!listener.joinable());
 
     listener = std::thread([this]() {
-        while (true) {
+        while (!stopping) {
             if (listen(sock, listenBacklog) == -1) {
-                perror("listen");
+                if (!stopping) perror("listen");
                 break;
             }
 
@@ -108,19 +108,21 @@ void StreamServer::online(void) {
             int peer = accept(sock, &peerAddr, &peerAddrLen);
 
             if (peer == -1) {
+                if (stopping) break;
                 perror("accept");
                 continue;
             }
 
-            createHandler(peer);
+            createHandler(peer)->start();
         }
     });
 }
 
 void StreamServer::offline(void) {
     assert(sock != -1);
-    
-    close(sock);
+
+    stopping = true;
+    shutdown(sock, SHUT_RDWR);
     sock = -1;
 
     if (listener.joinable()) {

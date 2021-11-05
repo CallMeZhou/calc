@@ -80,14 +80,14 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/agedboy/dev/calc/CMakeFiles /home/agedboy/dev/calc/CMakeFiles/progress.marks
-	$(MAKE) -f CMakeFiles/Makefile2 all
+	cd /home/agedboy/dev/calc && $(CMAKE_COMMAND) -E cmake_progress_start /home/agedboy/dev/calc/CMakeFiles /home/agedboy/dev/calc/cli/CMakeFiles/progress.marks
+	cd /home/agedboy/dev/calc && $(MAKE) -f CMakeFiles/Makefile2 cli/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/agedboy/dev/calc/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	$(MAKE) -f CMakeFiles/Makefile2 clean
+	cd /home/agedboy/dev/calc && $(MAKE) -f CMakeFiles/Makefile2 cli/clean
 .PHONY : clean
 
 # The main clean target
@@ -97,57 +97,60 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	$(MAKE) -f CMakeFiles/Makefile2 preinstall
+	cd /home/agedboy/dev/calc && $(MAKE) -f CMakeFiles/Makefile2 cli/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	$(MAKE) -f CMakeFiles/Makefile2 preinstall
+	cd /home/agedboy/dev/calc && $(MAKE) -f CMakeFiles/Makefile2 cli/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/agedboy/dev/calc && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
-#=============================================================================
-# Target rules for targets named com
+# Convenience name for target.
+cli/CMakeFiles/echosvc.dir/rule:
+	cd /home/agedboy/dev/calc && $(MAKE) -f CMakeFiles/Makefile2 cli/CMakeFiles/echosvc.dir/rule
+.PHONY : cli/CMakeFiles/echosvc.dir/rule
 
-# Build rule for target.
-com: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 com
-.PHONY : com
+# Convenience name for target.
+echosvc: cli/CMakeFiles/echosvc.dir/rule
 
-# fast build rule for target.
-com/fast:
-	$(MAKE) -f com/CMakeFiles/com.dir/build.make com/CMakeFiles/com.dir/build
-.PHONY : com/fast
-
-#=============================================================================
-# Target rules for targets named svr
-
-# Build rule for target.
-svr: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 svr
-.PHONY : svr
-
-# fast build rule for target.
-svr/fast:
-	$(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/build
-.PHONY : svr/fast
-
-#=============================================================================
-# Target rules for targets named echosvc
-
-# Build rule for target.
-echosvc: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 echosvc
 .PHONY : echosvc
 
 # fast build rule for target.
 echosvc/fast:
-	$(MAKE) -f cli/CMakeFiles/echosvc.dir/build.make cli/CMakeFiles/echosvc.dir/build
+	cd /home/agedboy/dev/calc && $(MAKE) -f cli/CMakeFiles/echosvc.dir/build.make cli/CMakeFiles/echosvc.dir/build
 .PHONY : echosvc/fast
+
+echosvc.o: echosvc.cpp.o
+
+.PHONY : echosvc.o
+
+# target to build an object file
+echosvc.cpp.o:
+	cd /home/agedboy/dev/calc && $(MAKE) -f cli/CMakeFiles/echosvc.dir/build.make cli/CMakeFiles/echosvc.dir/echosvc.cpp.o
+.PHONY : echosvc.cpp.o
+
+echosvc.i: echosvc.cpp.i
+
+.PHONY : echosvc.i
+
+# target to preprocess a source file
+echosvc.cpp.i:
+	cd /home/agedboy/dev/calc && $(MAKE) -f cli/CMakeFiles/echosvc.dir/build.make cli/CMakeFiles/echosvc.dir/echosvc.cpp.i
+.PHONY : echosvc.cpp.i
+
+echosvc.s: echosvc.cpp.s
+
+.PHONY : echosvc.s
+
+# target to generate assembly for a file
+echosvc.cpp.s:
+	cd /home/agedboy/dev/calc && $(MAKE) -f cli/CMakeFiles/echosvc.dir/build.make cli/CMakeFiles/echosvc.dir/echosvc.cpp.s
+.PHONY : echosvc.cpp.s
 
 # Help Target
 help:
@@ -157,9 +160,10 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... com"
-	@echo "... svr"
 	@echo "... echosvc"
+	@echo "... echosvc.o"
+	@echo "... echosvc.i"
+	@echo "... echosvc.s"
 .PHONY : help
 
 
@@ -171,6 +175,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	$(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/agedboy/dev/calc && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

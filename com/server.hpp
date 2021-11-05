@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+#include <vector>
 #include <thread>
 #include <functional>
 
@@ -9,6 +11,7 @@ protected:
 
 public:
     StreamServerHandler(int peer);
+    void start(void);
     virtual ~StreamServerHandler();
 };
 
@@ -27,11 +30,12 @@ public:
 
 private:
     int sock;
+    bool stopping;
     std::thread listener;
     HandlerFactory createHandler;
 
 public:
-    StreamServer(unsigned short port, HandlerFactory createHandler);
+    StreamServer(const std::string &serivce, HandlerFactory createHandler);
     ~StreamServer();
     void online(void);
     void offline(void);

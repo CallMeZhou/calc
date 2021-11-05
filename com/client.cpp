@@ -9,7 +9,14 @@
 #include "protocol.hpp"
 #include "client.hpp"
 
-std::string echo(const std::string &node, const std::string &service, const std::string &msg) {
+struct SocketFD {
+    int fd;
+    SocketFD(int fd) : fd(fd) {}
+    ~SocketFD() { close(fd); }
+    operator int() const { return fd; }
+};
+
+static SocketFD connectRemote(const std::string &node, const std::string &service) {
     int sock = -1, err;
 
     struct addrinfo req = {0};
@@ -40,32 +47,34 @@ std::string echo(const std::string &node, const std::string &service, const std:
         throw std::runtime_error("Failed to bind");
     }
 
-    try {
-        BaseHeader h;
-        h.version = 1;
-        h.bodyLength = msg.length();
+    return { sock };
+}
 
-        if (send(sock, &h, sizeof(h), 0) == -1) {
-            throw std::runtime_error(strerror(errno));
-        }
+std::string echo(const std::string &node, const std::string &service, const std::string &msg) {
+    SocketFD sock = connectRemote(node, service);
 
-        if (send(sock, msg.c_str(), h.bodyLength, 0) == -1) {
-            throw std::runtime_error(strerror(errno));
-        }
+    BaseHeader h;
+    h.version = 1;
+    h.bodyLength = msg.length();
 
-        if (recv(sock, &h, sizeof(h), 0) == 0) {
-            throw std::runtime_error("Peer dropped when receiving response header");
-        }
-
-        std::vector<char> response;
-        response.resize(h.bodyLength);
-        if (recv(sock, &response[0], h.bodyLength, 0) == 0) {
-            throw std::runtime_error("Peer dropped when receiving response body");
-        }
-        response.push_back('\0');
-        return &response[0];
-    } catch (std::exception &e) {
-        close(sock);
-        throw e;
+    if (send(sock, &h, sizeof(h), 0) == -1) {
+        throw std::runtime_error(strerror(errno));
     }
+
+    if (send(sock, msg.c_str(), h.bodyLength, 0) == -1) {
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (recv(sock, &h, sizeof(h), 0) == 0) {
+        throw std::runtime_error("Peer dropped when receiving response header");
+    }
+
+    std::vector<char> response;
+    response.resize(h.bodyLength);
+    if (recv(sock, &response[0], h.bodyLength, 0) == 0) {
+        throw std::runtime_error("Peer dropped when receiving response body");
+    }
+    response.push_back('\0');
+
+    return &response[0];
 }

@@ -6,3 +6,6 @@
 /home/agedboy/dev/calc/svr/CMakeFiles/rebuild_cache.dir
 /home/agedboy/dev/calc/svr/CMakeFiles/edit_cache.dir
 /home/agedboy/dev/calc/svr/CMakeFiles/svr.dir
+/home/agedboy/dev/calc/cli/CMakeFiles/rebuild_cache.dir
+/home/agedboy/dev/calc/cli/CMakeFiles/edit_cache.dir
+/home/agedboy/dev/calc/cli/CMakeFiles/echosvc.dir
