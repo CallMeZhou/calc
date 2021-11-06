@@ -125,6 +125,60 @@ svr/fast:
 	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/build
 .PHONY : svr/fast
 
+__/keypress/keypress.o: __/keypress/keypress.c.o
+
+.PHONY : __/keypress/keypress.o
+
+# target to build an object file
+__/keypress/keypress.c.o:
+	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/__/keypress/keypress.c.o
+.PHONY : __/keypress/keypress.c.o
+
+__/keypress/keypress.i: __/keypress/keypress.c.i
+
+.PHONY : __/keypress/keypress.i
+
+# target to preprocess a source file
+__/keypress/keypress.c.i:
+	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/__/keypress/keypress.c.i
+.PHONY : __/keypress/keypress.c.i
+
+__/keypress/keypress.s: __/keypress/keypress.c.s
+
+.PHONY : __/keypress/keypress.s
+
+# target to generate assembly for a file
+__/keypress/keypress.c.s:
+	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/__/keypress/keypress.c.s
+.PHONY : __/keypress/keypress.c.s
+
+ascasvr.o: ascasvr.cpp.o
+
+.PHONY : ascasvr.o
+
+# target to build an object file
+ascasvr.cpp.o:
+	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/ascasvr.cpp.o
+.PHONY : ascasvr.cpp.o
+
+ascasvr.i: ascasvr.cpp.i
+
+.PHONY : ascasvr.i
+
+# target to preprocess a source file
+ascasvr.cpp.i:
+	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/ascasvr.cpp.i
+.PHONY : ascasvr.cpp.i
+
+ascasvr.s: ascasvr.cpp.s
+
+.PHONY : ascasvr.s
+
+# target to generate assembly for a file
+ascasvr.cpp.s:
+	cd /home/agedboy/dev/calc && $(MAKE) -f svr/CMakeFiles/svr.dir/build.make svr/CMakeFiles/svr.dir/ascasvr.cpp.s
+.PHONY : ascasvr.cpp.s
+
 calcsvr.o: calcsvr.cpp.o
 
 .PHONY : calcsvr.o
@@ -161,6 +215,12 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... svr"
+	@echo "... __/keypress/keypress.o"
+	@echo "... __/keypress/keypress.i"
+	@echo "... __/keypress/keypress.s"
+	@echo "... ascasvr.o"
+	@echo "... ascasvr.i"
+	@echo "... ascasvr.s"
 	@echo "... calcsvr.o"
 	@echo "... calcsvr.i"
 	@echo "... calcsvr.s"

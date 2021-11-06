@@ -3,6 +3,7 @@
 #include <vector>
 #include <thread>
 #include <functional>
+#include "protocol.hpp"
 
 class StreamServerHandler {
 protected:
@@ -16,11 +17,12 @@ public:
 };
 
 class SimpleHandler : public StreamServerHandler {
+    std::vector<uint8_t> headerBuff;
     void handlerFunc(void) const override;
-    using StreamServerHandler::StreamServerHandler;
 
 protected:
-    virtual void handleRequest(const std::vector<char> &request, std::vector<char> &response) const = 0;
+    SimpleHandler(int headerBytes, int peer);
+    virtual ReturnCode handleRequest(const std::vector<uint8_t> &request, BaseHeader *header, std::vector<uint8_t> &response) const = 0;
 };
 
 class StreamServer {

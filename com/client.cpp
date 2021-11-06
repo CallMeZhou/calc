@@ -4,6 +4,8 @@
 #include <netdb.h>
 #include <errno.h>
 #include <string.h>
+#include <memory.h>
+#include <fstream>
 #include <vector>
 #include <stdexcept>
 #include "protocol.hpp"
@@ -75,6 +77,39 @@ std::string echo(const std::string &node, const std::string &service, const std:
         throw std::runtime_error("Peer dropped when receiving response body");
     }
     response.push_back('\0');
+
+    return &response[0];
+}
+
+std::string asca(const std::string &node, const std::string &service, const std::string &imgfile) {
+    std::ifstream infile(imgfile, std::ios_base::in | std::ios_base::binary);
+    std::vector<char> msg((std::istreambuf_iterator<char>(infile)), std::istreambuf_iterator<char>());
+
+    SocketFD sock = connectRemote(node, service);
+
+    AsciiartHeader h;
+    memset(&h, 0, sizeof(h));
+    h.version = 1;
+    h.bodyLength = msg.size();
+    h.requestedWidth = 60;
+
+    if (send(sock, &h, sizeof(h), 0) == -1) {
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (send(sock, &msg[0], h.bodyLength, 0) == -1) {
+        throw std::runtime_error(strerror(errno));
+    }
+
+    if (recv(sock, &h, sizeof(h), 0) == 0) {
+        throw std::runtime_error("Peer dropped when receiving response header");
+    }
+
+    std::vector<char> response;
+    response.resize(h.bodyLength);
+    if (recv(sock, &response[0], h.bodyLength, 0) == 0) {
+        throw std::runtime_error("Peer dropped when receiving response body");
+    }
 
     return &response[0];
 }

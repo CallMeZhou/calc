@@ -1,2 +1,0 @@
-/usr/bin/ar qc ../lib/libcom.a  CMakeFiles/com.dir/client.cpp.o CMakeFiles/com.dir/server.cpp.o
-/usr/bin/ranlib ../lib/libcom.a

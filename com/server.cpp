@@ -23,25 +23,26 @@ void StreamServerHandler::start(void) {
 }
 
 void SimpleHandler::handlerFunc(void) const {
-    std::vector<char> request, response;
+    std::vector<uint8_t> request, response;
 
     while (true) {
-        BaseHeader h;
-        if (recv(peer, &h, sizeof(h), 0) == 0) {
+        BaseHeader *header = (BaseHeader*)&headerBuff[0];
+        if (recv(peer, header, headerBuff.size(), 0) == 0) {
             break;
         }
 
-        request.resize(h.bodyLength);
-        if (recv(peer, &request[0], h.bodyLength, 0) == 0) {
+        request.resize(header->bodyLength);
+        if (recv(peer, &request[0], header->bodyLength, 0) == 0) {
             break;
         }
 
         response.clear();
-        handleRequest(request, response);
+        ReturnCode rc = handleRequest(request, header, response);
 
-        h.version = 1;
-        h.bodyLength = response.size();
-        if(send(peer, &h, sizeof(h), 0) == 0) {
+        header->version = 1;
+        header->bodyLength = response.size();
+        header->rc = rc;
+        if(send(peer, header, headerBuff.size(), 0) == 0) {
             break;
         }
 
@@ -51,6 +52,11 @@ void SimpleHandler::handlerFunc(void) const {
     }
 
     delete this;
+}
+
+SimpleHandler::SimpleHandler(int headerBytes, int peer) : StreamServerHandler(peer) {
+    assert(headerBytes >= sizeof(BaseHeader));
+    headerBuff.resize(headerBytes);
 }
 
 StreamServer::StreamServer(const std::string &serivce, HandlerFactory createHandler) : sock(-1), stopping(false), createHandler(createHandler) {

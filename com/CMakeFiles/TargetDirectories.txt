@@ -1,3 +1,0 @@
-/home/agedboy/dev/calc/com/CMakeFiles/rebuild_cache.dir
-/home/agedboy/dev/calc/com/CMakeFiles/edit_cache.dir
-/home/agedboy/dev/calc/com/CMakeFiles/com.dir

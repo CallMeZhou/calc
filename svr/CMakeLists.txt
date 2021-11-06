@@ -1,5 +1,5 @@
 file(GLOB srcs *.cpp)
 file(GLOB keypress ${CALC_SOURCE_DIR}/keypress/keypress.c)
 add_executable (svr ${srcs} ${keypress})
-target_include_directories(svr PUBLIC ${CALC_SOURCE_DIR}/keypress)
+target_include_directories(svr PUBLIC ${CALC_SOURCE_DIR}/com ${CALC_SOURCE_DIR}/keypress ${CALC_SOURCE_DIR}/stb)
 target_link_libraries (svr LINK_PUBLIC com pthread)
