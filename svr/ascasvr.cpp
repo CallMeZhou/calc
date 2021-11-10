@@ -7,65 +7,67 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize.h"
 
-static constexpr uint8_t LUM_CHARS[] = {
+/*
+static constexpr char LUM_CHARS[] = {
     ' ', '.', 'o', '+', '#'
 };
 
-static constexpr uint8_t N_LUM_CHARS = sizeof(LUM_CHARS) / sizeof(LUM_CHARS[0]);
+static constexpr char N_LUM_CHARS = sizeof(LUM_CHARS) / sizeof(LUM_CHARS[0]);
 static constexpr float LUM_DIV = (float) UINT8_MAX / (float) (N_LUM_CHARS - 1);
 
-static void blur(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, int stride);
-static void edge(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, int stride);
+static void blur(char *destimgbuff, const char *srcimgbuff, int w, int h, int stride);
+static void edge(char *destimgbuff, const char *srcimgbuff, int w, int h, int stride);
 
-ServiceAsciiart::ServiceAsciiart(int peer) : SimpleHandler(sizeof(AsciiartHeader), peer) {
+void ServiceAsciiart::processHeader(const HeaderType &header) {
+    requestedWidth = std::atol(header.at("X-requested-width").c_str());
 }
 
-ReturnCode ServiceAsciiart::handleRequest(const std::vector<uint8_t> &request, BaseHeader *header, std::vector<uint8_t> &response) const {
-    AsciiartHeader *ascHeader = (AsciiartHeader*)header;
-
+std::tuple<ServiceAsciiart::HeaderType, ServiceAsciiart::MessageBuffer> 
+ServiceAsciiart::handleRequest(const MessageBuffer &request) const {
     int w, h, ch;
-    auto img = stbi_load_from_memory(&request[0], request.size(), &w, &h, &ch, 1);
+    auto img = stbi_load_from_memory((const uint8_t*) &request[0], request.size(), &w, &h, &ch, 1);
     if (!img) {
-        return ReturnCode::FailedProcess;
+        // TODO throw
     }
 
-    int resultWidth = ascHeader->requestedWidth + 1; // resultWidth is stride
-    int resultHeight = (int) ((float) h / (float) w * (float) ascHeader->requestedWidth + 0.5f);
+    int resultWidth = requestedWidth + 1; // resultWidth is stride
+    int resultHeight = (int) ((float) h / (float) w * (float) requestedWidth + 0.5f);
 
+    MessageBuffer response;
     response.resize(resultWidth * resultHeight + 1);
-    stbir_resize_uint8(img, w, h, 0, &response[0], ascHeader->requestedWidth, resultHeight, resultWidth, 1);
+    stbir_resize_uint8(img, w, h, 0, (uint8_t*) &response[0], requestedWidth, resultHeight, resultWidth, 1);
     stbi_image_free(img);
 
     {
-        std::vector<uint8_t> temp;
+        std::vector<char> temp;
         temp.resize(response.size());
-        blur(&temp[0], &response[0], ascHeader->requestedWidth, resultHeight, resultWidth);
-        edge(&response[0], &temp[0], ascHeader->requestedWidth, resultHeight, resultWidth);
+        blur(&temp[0], &response[0], requestedWidth, resultHeight, resultWidth);
+        edge(&response[0], &temp[0], requestedWidth, resultHeight, resultWidth);
     }
 
     for (auto &i : response) {
         i = LUM_CHARS[(int) ((float) i / LUM_DIV + 0.5f)];
     } 
 
-    for (int x = ascHeader->requestedWidth, y = 0; y < resultHeight; y++, x += resultWidth) {
+    for (int x = requestedWidth, y = 0; y < resultHeight; y++, x += resultWidth) {
         response[x] = '\n';
     }
 
     *response.rbegin() = '\0';
 
-    return ReturnCode::Succeeded;
+    return {{}, response};
 }
 
 ServiceAsciiart::~ServiceAsciiart() {
     printf("ServiceAsciiart-%p done.\n", this);
 }
 
-StreamServerHandler* ServiceAsciiart::factory(int peer) {
+HttpProtocolHandler* ServiceAsciiart::factory(int peer) {
     return new ServiceAsciiart(peer);
 }
 
-static float conv_kernel(const uint8_t *pixelInImgBuff, int stride, const float *mat33) {
-    const uint8_t *imgbuff = pixelInImgBuff - stride - 1;
+static float conv_kernel(const char *pixelInImgBuff, int stride, const float *mat33) {
+    const char *imgbuff = pixelInImgBuff - stride - 1;
     float result = 0;
     for (int i = 0; i < 3; i++) {
         float temp[] = {(float) imgbuff[0], (float) imgbuff[1], (float) imgbuff[2]};
@@ -75,7 +77,7 @@ static float conv_kernel(const uint8_t *pixelInImgBuff, int stride, const float 
     return result;
 }
 
-static void blur(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, int stride) {
+static void blur(char *destimgbuff, const char *srcimgbuff, int w, int h, int stride) {
     static constexpr float gaussian[] = {
         0.0625f, 0.125f, 0.0625f,
          0.125f,  0.25f,  0.125f,
@@ -88,7 +90,7 @@ static void blur(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, 
         auto srcptr  = src;
         auto destptr = dest;
         for (int x = 1; x < w - 1; x++) {
-            *destptr++ = (uint8_t) conv_kernel(srcptr++, stride, gaussian);
+            *destptr++ = (char) conv_kernel(srcptr++, stride, gaussian);
         }
         dest[-1] = dest[0];
         destptr[0] = destptr[-1];
@@ -102,7 +104,7 @@ static void blur(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, 
     memcpy(dest, dest - stride, w);
 }
 
-static void edge(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, int stride) {
+static void edge(char *destimgbuff, const char *srcimgbuff, int w, int h, int stride) {
     static constexpr float sobel_x[] = {
         1, 0, -1,
         2, 0, -2,
@@ -126,7 +128,7 @@ static void edge(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, 
             srcptr++;
             float gradient = sqrt(accum_x * accum_x + accum_y * accum_y);
             if (gradient < 0) gradient = 0; else if (gradient > 255.0f) gradient = 255.0f;
-            *destptr++ = (uint8_t) gradient;
+            *destptr++ = (char) gradient;
         }
         dest[-1] = dest[0];
         destptr[0] = destptr[-1];
@@ -139,3 +141,4 @@ static void edge(uint8_t *destimgbuff, const uint8_t *srcimgbuff, int w, int h, 
     memcpy(destimgbuff, destimgbuff + stride, w);
     memcpy(dest, dest - stride, w);
 }
+*/

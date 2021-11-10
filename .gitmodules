@@ -6,3 +6,6 @@
 	path = stb
 	url = git@github.com:nothings/stb.git
 	branch = master
+[submodule "fmt"]
+	path = fmt
+	url = git@github.com:fmtlib/fmt.git

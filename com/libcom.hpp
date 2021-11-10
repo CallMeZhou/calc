@@ -1,4 +1,5 @@
 #pragma once
 #include "protocol.hpp"
-#include "server.hpp"
-#include "client.hpp"
+#include "excepts.hpp"
+#include "tcpsvr.hpp"
+#include "httpsvr.hpp"
