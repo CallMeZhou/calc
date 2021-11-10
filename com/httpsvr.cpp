@@ -26,108 +26,181 @@ static const regex HEADER_PATTERN(" *(.+?) *: *(.*?) *\r\n");
 static const array<char, 2> CR {'\r', '\n'};
 static const array<char, 4> CRCR {'\r', '\n', '\r', '\n'};
 
-static string makeControllerName(const string &method, const string &url);
-static args_t makeControllerArgs(const string &method, const string &url);
-
-http::~http() {
-    close(peer);
-    fmt::print("http session {} exited.\n", (void*) this);
+/**
+ * makes the name of a controller by the http method and the url-path
+ * @param method the http method
+ * @param url the url
+ * @return the controller name
+ * @note the `url` can be only a path (i.e., "/path/to/the/api") or a full url.
+ * the path part will be extracted from a valid url.
+ */
+static string make_controller_name(const string &method, const string &url) {
+    static const regex URLPATH_PATTERN("(?:http[s]?://)?[^/]*(/[^?]+)");
+    smatch m;
+    return fmt::format("{}({})", method, regex_search(url, m, URLPATH_PATTERN) ? m[1].str() : "/");
 }
 
-msgbuff_t::const_iterator http::receive_header(msgbuff_t &request) const {
-    request.clear();
-    msgbuff_t::const_iterator headerEnd = request.end();
+/**
+ * extracts the arguments (k-v pairs) from a valid url. it is the part after
+ * the question mark.
+ * @param url the url
+ * @return the k-v map representation the arguments
+ */
+static args_t make_controller_args(const string &url) {
+    args_t args;
+    for (auto &kv : split(cut(url, '?').second, '&')) {
+        args.insert(cut(kv, '='));
+    }
+    return args;
+}
 
-    while (request.end() == headerEnd /* TODO over-input prevention*/) {
-        array<char, MAX_RECV_ONCE> recvBuff;
-        auto recvBytes = recv(peer, recvBuff.data(), recvBuff.size(), 0);
-        if (0 == recvBytes) {
+/**
+ * receives the header part of an http request. pulls out data from the 
+ * beginning till the end-of-header is found. the data is stored in `request` 
+ * and the end-pos of the header is returned. a small part of the body 
+ * might also be received.
+ * @param peer socket fd
+ * @param request receiving data buffer
+ * @return iterator of the data buffer that points to the next bytes of the
+ * end-of-header sign.
+ */
+static msgbuff_t::const_iterator receive_header(int peer, msgbuff_t &request) {
+    request.clear();
+    msgbuff_t::const_iterator header_end = request.end();
+
+    while (request.end() == header_end /* TODO over-input prevention*/) {
+        array<char, MAX_RECV_ONCE> recv_buff;
+        auto recv_bytes = recv(peer, recv_buff.data(), recv_buff.size(), 0);
+        if (0 == recv_bytes) {
             throw peer_completion();
-        } else if (recvBytes < 0) {
+        } else if (recv_bytes < 0) {
             throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
 
-        size_t appendPos = request.size();
-        auto insertionPoint = request.insert(request.end(), recvBuff.begin(), recvBuff.begin() + recvBytes);
+        size_t append_pos = request.size();
+        auto insertion_point = request.insert(request.end(), recv_buff.begin(), recv_buff.begin() + recv_bytes);
 
-        headerEnd = search(insertionPoint, request.end(), CRCR.begin(), CRCR.end());
+        header_end = search(insertion_point, request.end(), CRCR.begin(), CRCR.end());
     }
 
-    return headerEnd += 4; // include the "\r\n\r\n" in the header
+    return header_end += 4; // include the "\r\n\r\n" in the header
 }
 
-header_t http::parse_header(const msgbuff_t &request, msgbuff_t::const_iterator headerEnd) const {
+/**
+ * reads and parses the http header and reorganizes the information in a k-v map.
+ * @param request receiving data buffer
+ * @param header_end the returned value of receive_header
+ * @return the k-v map representation of the http header
+ * @note the http start-line will also be in the kv-map with an empty key.
+ */
+static header_t parse_header(const msgbuff_t &request, msgbuff_t::const_iterator header_end) {
 
     header_t header;
 
-    auto firstLineEnd = search(request.begin(), request.end(), CR.begin(), CR.end());
-    header[""] = string(request.begin().base(), firstLineEnd.base());
-    firstLineEnd += 2;
+    auto first_line_end = search(request.begin(), request.end(), CR.begin(), CR.end());
+    header[""] = string(request.begin().base(), first_line_end.base());
+    first_line_end += 2;
 
-    auto matchBegin = cregex_iterator(firstLineEnd.base(), headerEnd.base(), HEADER_PATTERN);
-    auto matchEnd   = cregex_iterator();
-    for (auto i = matchBegin; i != matchEnd; i++) {
+    auto match_begin = cregex_iterator(first_line_end.base(), header_end.base(), HEADER_PATTERN);
+    auto match_end   = cregex_iterator();
+    for (auto i = match_begin; i != match_end; i++) {
         header[(*i)[1]] = (*i)[2];
     }
 
     return header;
 }
 
-tuple<string, string, string> http::parse_start_line(const header_t& header) const {
+/**
+ * splits the start-line of the http request into the 3 parts: method, 
+ * path, and http version.
+ * @param header the returned value of parse_header
+ * @return a tuple containing the method, path, and http version.
+ */
+static tuple<string, string, string> parse_start_line(const header_t& header) {
     string method, url, version;
     stringstream(header.at("")) >> method >> url >> version;
     return {method, url, version};
 }
 
-void http::process_header(const header_t &header) {
+/**
+ * extracts information from the http header that the http protocol implementation
+ * concers.
+ * @param header the returned value of parse_header
+ * @return a tuple containing the keep-alive and Content-Length
+ */
+static tuple<bool, int> process_header(const header_t &header) {
+    bool keep_alive;
+    int content_length;
     try {
         auto &connection = header.at("connection");
         if (connection == "keep-alive") {
-            keepAlive = true;
+            keep_alive = true;
         } else if (connection == "close") {
-            keepAlive = false;
+            keep_alive = false;
         } else {
             throw handle_request_failure(400, fmt::format("Bad request due to unknown connection status '{}'.", connection));
         }
     } catch (...) {
-        keepAlive = true;
+        keep_alive = true;
     }
     
     try {
-        contentLength = stoul(header.at("Content-Length"));
+        content_length = stoul(header.at("Content-Length"));
     } catch (...) {
-        contentLength = 0;
+        content_length = 0;
     }
+
+    return {keep_alive, content_length};
 }
 
-tuple<string, args_t> http::controller_name_args(const string &method, const string &url) const {
+/**
+ * accepts http method and url and creates the name and arguments for the controller
+ * @param method the returned value of parse_start_line
+ * @param url the returned value of parse_start_line
+ * @return a tuple containing the name and arguments for the controller
+ */
+static tuple<string, args_t> controller_name_args(const string &method, const string &url) {
     return {
-        makeControllerName(method, url), 
-        makeControllerArgs(method, url)
+        make_controller_name(method, url), 
+        make_controller_args(url)
     };
 }
 
-void http::receive_body(msgbuff_t &request) {
-    while(request.size() < contentLength) { // contentLength is set by processHeader()
-        array<char, MAX_RECV_ONCE> recvBuff;
-        int recvBytes = recv(peer, recvBuff.data(), recvBuff.size(), 0);
-        if (0 == recvBytes) {
+/**
+ * it is a continuation of receive_header receiving the rest of the http reuest.
+ * @param peer socket fd
+ * @param content_length the returned value of process_header
+ */
+static void receive_body(int peer, int content_length, msgbuff_t &request) {
+    while(request.size() < content_length) { // contentLength is set by processHeader()
+        array<char, MAX_RECV_ONCE> recv_buff;
+        int recv_bytes = recv(peer, recv_buff.data(), recv_buff.size(), 0);
+        if (0 == recv_bytes) {
             throw peer_completion();
-        } else if (recvBytes < 0) {
+        } else if (recv_bytes < 0) {
             throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request body.", errno));
         }
-        request.insert(request.end(), recvBuff.begin(), recvBuff.begin() + recvBytes);
+        request.insert(request.end(), recv_buff.begin(), recv_buff.begin() + recv_bytes);
     }
 }
 
-string http::format_header(const header_t &header, const string &statusMsg) const {
+/**
+ * takes a k-v map form of header and a status string, and creates a reponse 
+ * string (the header part) that complies with the http protocol.
+ * @param header the k-v map form of header
+ * @param status the http status string (i.e., "200 OK")
+ * @note if the status has content, it must start with the triple digit http
+ * status code. an optional status message can follow the status code separated
+ * with a whitespace. it the status is empty, "200 OK" will be used by default.
+ */
+static string format_header(const header_t &header, const string &status = "") {
     stringstream ss;
 
     ss << "HTTP/1.1 ";
-    if (statusMsg.empty()) {
+    if (status.empty()) {
         ss << "200 OK";
     } else {
-        ss << statusMsg;
+        ss << status;
     }
     ss << "\r\n";
 
@@ -139,97 +212,127 @@ string http::format_header(const header_t &header, const string &statusMsg) cons
     return ss.str();
 }
 
-void http::send_response(const string &header) const {
+/**
+ * sends http response header
+ * @param peer the socket fd
+ * @param header the k-v map form of the http response header
+ */
+static void send_response(int peer, const string &header) {
     if(send(peer, header.c_str(), header.length(), 0) == 0) {
         // TODO handle error
     }
 }
 
-void http::send_response(const string &header, const msgbuff_t &body) const {
-    send_response(header);
-
+/**
+ * sends http response body
+ * @param peer the socket fd
+ * @param body the response body
+ */
+static void send_response(int peer, const msgbuff_t &body) {
     if(send(peer, &body[0], body.size(), 0) == 0) {
         // TODO handle error
     }
 }
 
-void http::start(int peerFd, const string &sessionName) {
-    peer = peerFd;
-    name = sessionName;
-    fmt::print("Client {} was accepted by session {}.\n", sessionName, (void*) this);
-    thread([this]() {
+/**
+ * a map for controller selection. given a method plus a url-path,
+ * a controller function will be selected to handle the request and
+ * produce the response.
+ */
+using controller_registry = map<string, controller>;
 
-        msgbuff_t request;
-        header_t  requestHeader;
-        msgbuff_t response;
-        header_t  responseHeader;
-        string    method, url, version;
-        string    serviceName;
-        args_t    serviceArgs;
-    
-        try {
-            keepAlive = true;
-            while (keepAlive) {
-                auto headerEndPos = receive_header(request);
-                requestHeader = parse_header(request, headerEndPos);
-                request.erase(request.begin(), headerEndPos);
-                tie(method, url, version) = parse_start_line(requestHeader);
-                tie(serviceName, serviceArgs) = controller_name_args(method, url);
-                auto controller = find_controller(method, url);
-                process_header(requestHeader); // will extract contentLength and keepAlive
-                receive_body(request); // rely on contentLength
-                tie(responseHeader, response) = controller(request, serviceArgs, requestHeader);
-                responseHeader["Content-Length"] = fmt::format("{}", response.size());
-                send_response(format_header(responseHeader), response);
-            }
-        } catch (handle_request_failure &e) {
-            responseHeader["Content-Length"] = "0";
-            send_response(format_header(responseHeader, e.what()));
-        } catch (peer_completion&) {
-
-        } catch (...) {
-            responseHeader["Content-Length"] = "0";
-            send_response(format_header(responseHeader, "500 Unexpected server internal error."));
-        }
-
-        delete this;
-
-    }).detach();
+/**
+ * gets the instance (singleton) of the controller selection map.
+ * @return the controller selection map
+ */
+static controller_registry& get_controller_registry(void) {
+    static controller_registry controller_registry;
+    return controller_registry;
 }
 
-application& http::factory(void) {
-    return *(new http);
+/**
+ * [API] application system uses this API to add the request handling functions.
+ * @param method the http method: "GET", "POST", "PUT", "DELETE", ...
+ * @param path the url-path the handling function will be associated to
+ */
+void register_controller(const string &method, const string &path, controller controller_lambda) {
+    get_controller_registry()[make_controller_name(method, path)] = controller_lambda;
 }
 
-http::controller_registry& http::get_controller_registry(void) {
-    static controller_registry controllerRegistry;
-    return controllerRegistry;
-}
-
-void http::register_controller(const string &method, const string &path, controller controllerLambda) {
-    get_controller_registry()[makeControllerName(method, path)] = controllerLambda;
-}
-
-http::controller http::find_controller(const string &method, const string &path) {
+/**
+ * finds the request handling function by http method and url-path.
+ * @param method the http method: "GET", "POST", "PUT", "DELETE", ...
+ * @param path the url-path the handling function will be associated to
+ * @return the request handling function
+ */
+static controller find_controller(const string &method, const string &path) {
     try {
-        return get_controller_registry().at(makeControllerName(method, path));
+        return get_controller_registry().at(make_controller_name(method, path));
     } catch (out_of_range &e) {
         throw handle_request_failure(404, fmt::format("No service available at '{}' for '{}'.", path, method));
     }
 }
 
-static string makeControllerName(const string &method, const string &url) {
-    static const regex URLPATH_PATTERN("(?:http[s]?://)?[^/]*(/[^?]+)");
-    smatch m;
-    return fmt::format("{}({})", method, regex_search(url, m, URLPATH_PATTERN) ? m[1].str() : "/");
-}
+/**
+ * [API] the http protocol handling function. application system connects this API
+ * to a initialized tcp server object. when a client connection is accepted, the 
+ * tcp server will create a thread and run this function in the thread.
+ */
+void http(int peer_fd, const string &session_name) {
+    fmt::print("Client {} was accepted by http session {}.\n", session_name, pthread_self());
 
-static args_t makeControllerArgs(const string &method, const string &url) {
-    args_t args;
-    for (auto &kv : split(cut(url, '?').second, '&')) {
-        args.insert(cut(kv, '='));
+    msgbuff_t request;
+    header_t  request_header;
+    msgbuff_t response;
+    header_t  response_header;
+    string    method, url, version;
+    string    service_name;
+    args_t    service_args;
+    bool      keep_alive;
+    int       content_length;
+    int       peer;
+
+    try {
+        keep_alive = true;
+        while (keep_alive) {
+            
+            // receive and parse header
+            auto header_end_pos = receive_header(peer_fd, request);
+            request_header = parse_header(request, header_end_pos);
+            request.erase(request.begin(), header_end_pos); // not quite necessary...
+
+            // handle the start line of the request
+            tie(method, url, version) = parse_start_line(request_header);
+            tie(service_name, service_args) = controller_name_args(method, url);
+
+            // find the controller function
+            auto controller = find_controller(method, url);
+
+            // receive request body
+            tie(keep_alive, content_length) = process_header(request_header);
+            receive_body(peer_fd, content_length, request);
+
+            // call the application system to handle the request
+            tie(response_header, response) = controller(request, service_args, request_header);
+
+            // send back response
+            response_header["Content-Length"] = fmt::format("{}", response.size());
+            send_response(peer_fd, format_header(response_header));
+            send_response(peer_fd, response);
+
+        } // end of while (keep_alive)...
+    } catch (handle_request_failure &e) {
+        response_header["Content-Length"] = "0";
+        send_response(peer_fd, format_header(response_header, e.what()));
+    } catch (peer_completion&) {
+
+    } catch (...) {
+        response_header["Content-Length"] = "0";
+        send_response(peer_fd, format_header(response_header, "500 Unexpected server internal error."));
     }
-    return args;
+
+    close(peer_fd);
+    fmt::print("http session {} exited.\n", pthread_self());
 }
 
 }

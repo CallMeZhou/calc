@@ -16,7 +16,7 @@
 
 namespace server {
 
-tcp::tcp(const string &serivce, protocol_factory_t create_app) : sock(-1), stopping(false), create_app(create_app) {
+tcp::tcp(const string &serivce) : sock(-1), stopping(false) {
     int err;
 
     struct addrinfo req = {0};
@@ -55,11 +55,11 @@ tcp::~tcp() {
     }
 }
 
-void tcp::online(void) {
+void tcp::online(function<void(int, const string &)> app_protocol) {
     assert(sock != -1);
     assert(!listener.joinable());
 
-    listener = thread([this]() {
+    listener = thread([this, app_protocol]() {
         while (!stopping) {
             if (listen(sock, listen_backlog) == -1) {
                 if (!stopping) perror("listen");
@@ -80,7 +80,8 @@ void tcp::online(void) {
             getnameinfo(&peerAddr, peerAddrLen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV);
             string session_name = fmt::format("{}/{}", hbuf, sbuf); // just a name for debug purpose
 
-            create_app().start(peer, session_name);
+            // TODO do we need to take care of them when exiting
+            thread(app_protocol, peer, session_name).detach();
         }
     });
 }

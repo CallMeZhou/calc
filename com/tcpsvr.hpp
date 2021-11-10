@@ -4,15 +4,16 @@
 #include <map>
 #include <thread>
 #include <functional>
-#include "protocol.hpp"
 
 namespace server {
 
 using namespace std;
-using namespace protocol;
 
-using protocol_factory_t = function<application&(void)>;
-
+/**
+ * The TCP server that listens to connection requests from clients. It accepts
+ * connections and launch an application protocol handling threads for each
+ * established connection.
+ */
 class tcp {
 public:
     static const int listen_backlog = 50;
@@ -21,12 +22,29 @@ private:
     int sock;
     bool stopping;
     thread listener;
-    protocol_factory_t create_app;
 
 public:
-    tcp(const string &serivce, protocol_factory_t create_app);
+    /**
+     * Constructs the TCP server instance and binds the port.
+     * @param server the port number string (i.e., "8000") or the nickname of
+     * some well-known ports (i.e., "ssh" for port 22, "telnet" for port 23).
+     */
+    tcp(const string &serivce);
     ~tcp();
-    void online(void);
+    /**
+     * Starts the listening thread. It accepts connections and launch an 
+     * application protocol handling threads for each established connection.
+     * The specified protocol handling function app_protocol will run in its
+     * separate thread.
+     * @param app_protocol the protocol handling function
+     */
+    void online(function<void(int, const string &)> app_protocol);
+    /**
+     * Stops the listening thread.
+     * @note those running protocol handling threads won't be shut down. You
+     * can ignore those threads. They will exit when the clients close the
+     * connection.
+     */
     void offline(void);
 };
 
