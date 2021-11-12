@@ -2,6 +2,8 @@
 #include <string>
 #include <stdexcept>
 
+namespace server_excepts {
+
 class peer_completion : public std::runtime_error {
 public:
     peer_completion(void) : std::runtime_error("") {}
@@ -13,3 +15,5 @@ public:
     handle_request_failure(int httpStatus, const std::string &errMsg = "");
     const char* what() const noexcept override;
 };
+
+}

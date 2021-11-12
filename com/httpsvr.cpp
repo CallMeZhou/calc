@@ -19,7 +19,9 @@
 #include "excepts.hpp"
 #include "fmt/core.h"
 
-namespace protocol {
+namespace http {
+using namespace server_utils;
+using namespace server_excepts;
 
 static constexpr size_t MAX_RECV_ONCE = 65536;
 static const regex HEADER_PATTERN(" *(.+?) *: *(.*?) *\r\n");
@@ -47,11 +49,7 @@ static string make_controller_name(const string &method, const string &url) {
  * @return the k-v map representation the arguments
  */
 static args_t make_controller_args(const string &url) {
-    args_t args;
-    for (auto &kv : split(cut(url, '?').second, '&')) {
-        args.insert(cut(kv, '='));
-    }
-    return args;
+    return args_to_map(cut(url, '?').second, '&', '=');
 }
 
 /**
@@ -278,7 +276,7 @@ static controller find_controller(const string &method, const string &path) {
  * to a initialized tcp server object. when a client connection is accepted, the 
  * tcp server will create a thread and run this function in the thread.
  */
-void http(int peer_fd, const string &session_name) {
+void handler(int peer_fd, const string &session_name) {
     fmt::print("Client {} was accepted by http session {}.\n", session_name, pthread_self());
 
     msgbuff_t request;
@@ -317,6 +315,7 @@ void http(int peer_fd, const string &session_name) {
 
             // send back response
             response_header["Content-Length"] = fmt::format("{}", response.size());
+            response_header["Access-Control-Allow-Origin"] = "*";
             send_response(peer_fd, format_header(response_header));
             send_response(peer_fd, response);
 
