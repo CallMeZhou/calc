@@ -5,14 +5,14 @@ using namespace std;
 using namespace http;
 using namespace server_excepts;
 
-tuple<header_t, msgbuff_t> lambda_echo(const msgbuff_t &request, const args_t &args_url, const args_t &args_header) {
+tuple<header_t, msgbuff_t> lambda_echo(const msgbuff_t &request, const args_t &args_url, const args_t &args_query, const args_t &args_header) {
     string output = "ECHO: ";
 
     args_t::const_iterator i;
 
     if (request.size() > 0) {
         output.append(request.begin().base(), request.end().base());
-    } else if (args_url.end() != (i = args_url.find("msg"))) {
+    } else if (args_query.end() != (i = args_query.find("msg"))) {
         output.append(i->second.begin().base(), i->second.end().base());
     } else if (args_header.end() != (i = args_header.find("msg"))) {
         output.append(i->second.begin().base(), i->second.end().base());
@@ -29,4 +29,5 @@ tuple<header_t, msgbuff_t> lambda_echo(const msgbuff_t &request, const args_t &a
     };
 }
 
-REGISTER_CONTROLLER("GET", "/echo", lambda_echo);
+REGISTER_CONTROLLER("GET",  "echo", lambda_echo);
+REGISTER_CONTROLLER("POST", "echo", lambda_echo);

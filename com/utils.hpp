@@ -35,7 +35,7 @@ bool starts_with(const std::string &s, const std::string prefix);
 
 std::string& trim_left(std::string &s, char tobetrimmed = ' ');
 std::string& trim_right(std::string &s, char tobetrimmed = ' ');
-std::string& trim(std::string &s, char tobetrimmed = ' ');
+std::string& trim(std::string &s, char tobetrimmed_left = ' ', char tobetrimmed_right = ' ');
 
 template<typename _ForwardIterator>
 std::tuple<std::string, _ForwardIterator> getline(_ForwardIterator first, _ForwardIterator last, const std::string &line_ending) {

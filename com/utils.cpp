@@ -63,9 +63,9 @@ std::string& trim_right(std::string &s, char tobetrimmed) {
     return s;
 }
 
-std::string& trim(std::string &s, char tobetrimmed) {
-    trim_left(s, tobetrimmed);
-    trim_right(s, tobetrimmed);
+std::string& trim(std::string &s, char tobetrimmed_left, char tobetrimmed_right) {
+    trim_left(s, tobetrimmed_left);
+    trim_right(s, tobetrimmed_right);
     return s;
 }
 

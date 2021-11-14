@@ -15,6 +15,7 @@
 #include <functional>
 #include <regex>
 #include "httpsvr.hpp"
+#include "httpapi.hpp"
 #include "utils.hpp"
 #include "excepts.hpp"
 #include "fmt/core.h"
@@ -36,10 +37,10 @@ static const array<char, 4> CRCR {'\r', '\n', '\r', '\n'};
  * @note the `url` can be only a path (i.e., "/path/to/the/api") or a full url.
  * the path part will be extracted from a valid url.
  */
-static string make_controller_name(const string &method, const string &url) {
-    static const regex URLPATH_PATTERN("(?:http[s]?://)?[^/]*(/[^?]+)");
+static string make_controller_name(const string &url) {
+    static const regex URLPATH_PATTERN("(?:http[s]?://)?[^/]*/([^?]+)");
     smatch m;
-    return fmt::format("{}({})", method, regex_search(url, m, URLPATH_PATTERN) ? m[1].str() : "/");
+    return regex_search(url, m, URLPATH_PATTERN) ? m[1].str() : "";
 }
 
 /**
@@ -152,14 +153,13 @@ static tuple<bool, int> process_header(const header_t &header) {
 }
 
 /**
- * accepts http method and url and creates the name and arguments for the controller
- * @param method the returned value of parse_start_line
+ * accepts url and creates the name and arguments for the controller
  * @param url the returned value of parse_start_line
  * @return a tuple containing the name and arguments for the controller
  */
-static tuple<string, args_t> controller_name_args(const string &method, const string &url) {
+static tuple<string, args_t> controller_name_args(const string &url) {
     return {
-        make_controller_name(method, url), 
+        make_controller_name(url), 
         make_controller_args(url)
     };
 }
@@ -233,11 +233,11 @@ static void send_response(int peer, const msgbuff_t &body) {
 }
 
 /**
- * a map for controller selection. given a method plus a url-path,
- * a controller function will be selected to handle the request and
- * produce the response.
+ * a tool class for controller selection. given a method and a url-path,
+ * a controller function will be selected to handle the request and roduce 
+ * the response.
  */
-using controller_registry = map<string, controller>;
+using controller_registry = api::apis<controller>;
 
 /**
  * gets the instance (singleton) of the controller selection map.
@@ -254,7 +254,7 @@ static controller_registry& get_controller_registry(void) {
  * @param path the url-path the handling function will be associated to
  */
 void register_controller(const string &method, const string &path, controller controller_lambda) {
-    get_controller_registry()[make_controller_name(method, path)] = controller_lambda;
+    get_controller_registry().add(path, method, controller_lambda);
 }
 
 /**
@@ -263,9 +263,9 @@ void register_controller(const string &method, const string &path, controller co
  * @param path the url-path the handling function will be associated to
  * @return the request handling function
  */
-static controller find_controller(const string &method, const string &path) {
+static tuple<controller, args_t> find_controller(const string &method, const string &path) {
     try {
-        return get_controller_registry().at(make_controller_name(method, path));
+        return get_controller_registry().find(path, method);
     } catch (out_of_range &e) {
         throw handle_request_failure(404, fmt::format("No service available at '{}' for '{}'.", path, method));
     }
@@ -284,8 +284,8 @@ void handler(int peer_fd, const string &session_name) {
     msgbuff_t response;
     header_t  response_header;
     string    method, url, version;
-    string    service_name;
-    args_t    service_args;
+    string    query_name;
+    args_t    query_args;
     bool      keep_alive;
     int       content_length;
     int       peer;
@@ -301,17 +301,17 @@ void handler(int peer_fd, const string &session_name) {
 
             // handle the start line of the request
             tie(method, url, version) = parse_start_line(request_header);
-            tie(service_name, service_args) = controller_name_args(method, url);
+            tie(query_name, query_args) = controller_name_args(url);
 
             // find the controller function
-            auto controller = find_controller(method, url);
+            auto controller = find_controller(method, query_name);
 
             // receive request body
             tie(keep_alive, content_length) = process_header(request_header);
             receive_body(peer_fd, content_length, request);
 
             // call the application system to handle the request
-            tie(response_header, response) = controller(request, service_args, request_header);
+            tie(response_header, response) = get<0>(controller)(request, get<1>(controller), query_args, request_header);
 
             // send back response
             response_header["Content-Length"] = fmt::format("{}", response.size());
