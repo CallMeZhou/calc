@@ -56,6 +56,12 @@ std::string find_arg(const M1 &args1, const M2 &args2, const std::string &key, c
     return def_val;
 }
 
+template<typename M>
+std::string find_arg(const M &args, const std::string &key, const std::string &def_val) {
+    try { return args.at(key); } catch (...) {}
+    return def_val;
+}
+
 /**
  * A utility class that automatically runs your function when the program starts.
  * 

@@ -4,3 +4,4 @@
 #include "tcpsvr.hpp"
 #include "httpsvr.hpp"
 #include "formdata.hpp"
+#include "spages.hpp"
