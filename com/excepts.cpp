@@ -12,4 +12,17 @@ const char* handle_request_failure::what() const noexcept {
     return msg.c_str();
 }
 
+redirect_exception::redirect_exception(int httpStatus, const std::string &msg, const std::string &new_url) 
+: std::runtime_error(""), new_url(new_url) {
+    this->msg = msg.empty() ? fmt::format("{}", httpStatus) : fmt::format("{} {}", httpStatus, msg);
+}
+
+const char* redirect_exception::get_msg(void) const {
+    return msg.c_str();
+}
+
+const char* redirect_exception::get_url(void) const {
+    return new_url.c_str();
+}
+
 }

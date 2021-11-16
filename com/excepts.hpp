@@ -16,4 +16,13 @@ public:
     const char* what() const noexcept override;
 };
 
+class redirect_exception : public std::runtime_error {
+    std::string msg;
+    std::string new_url;
+public:
+    redirect_exception(int httpStatus, const std::string &msg, const std::string &new_url);
+    const char* get_msg(void) const;
+    const char* get_url(void) const;
+};
+
 }

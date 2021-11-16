@@ -3,5 +3,6 @@
 #include "utils.hpp"
 #include "tcpsvr.hpp"
 #include "httpsvr.hpp"
-#include "formdata.hpp"
-#include "spages.hpp"
+#include "httpform.hpp"
+#include "httpstatic.hpp"
+#include "httpredir.hpp"

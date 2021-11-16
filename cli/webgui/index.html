@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test Client</title>
+<link rel="stylesheet" href="index.css">
+<style>
+</style>
+</head>
+<body>
+
+<h1><center>ASCII-ART<br/>AT YOUR SERVICE</center></h1>
+
+<hr noshade/>
+
+<p><pre style="font-family:courier;" id="my-canvas"/></p>
+
+<p><center>
+<form enctype="multipart/form-data" id="my-form">
+    <input type="file" name="asca-source-image" id="file" accept="image/*" class="myclass" onchange="fileSelChanged(this)"/>
+	<label for="file">Step 1: select a picture file</label>
+    <input type="submit" name="submit" id="submit" class="myclass" />
+	<label for="submit" id="submitLabel" >Step 2: click to see what would happen</label>
+</form>
+</center></p>
+
+<script>
+document.getElementById("submitLabel").style.visibility = "hidden";
+
+function fileSelChanged() {
+	document.getElementById("submitLabel").style.visibility = "visible";
+	console.log("changed")
+}
+
+function send_data(form) {
+	let http = new XMLHttpRequest();
+
+	http.onreadystatechange = function () {
+	    if (http.readyState != 4) return;
+		
+		let my_convas = document.getElementById("my-canvas");
+		
+		if (http.status == 200) {
+	        my_convas.innerHTML = http.responseText;
+		} else {
+	        my_convas.innerHTML = `Error ${http.status}`;
+		}
+	};
+
+	http.addEventListener("error", function (event) {
+	    document.getElementById("my-canvas").innerHTML = "Network error: " + http.status;
+	});
+	
+	http.open("POST", "http://@_MYIP@:8000/asca?requested-width=70");
+	http.send(new FormData(form));
+}
+
+let form = document.getElementById("my-form");
+form.addEventListener("submit", function (event) {
+    event.preventDefault();
+	send_data(form);
+});
+
+</script>
+
+</body>
+</html>
+
+

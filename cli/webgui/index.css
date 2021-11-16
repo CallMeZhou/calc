@@ -1,0 +1,29 @@
+pre {
+    line-height: 50%;
+    overflow-x: auto;
+    word-wrap: nowrap;
+}
+  
+.myclass + label {
+    line-height: 1;
+    font-size: 2em;
+    color: white;
+    background-color:lightgray;
+    border-radius: 5px;
+    display: inline-block;
+}
+
+.myclass:focus + label,
+.myclass + label:hover {
+    background-color:dimgray;
+    cursor: pointer;
+}
+
+.myclass {
+    width: 0.1px;
+    height: 0.1px;
+    opacity: 0;
+    overflow: hidden;
+    position: absolute;
+    z-index: -1;
+}

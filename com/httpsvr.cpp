@@ -323,6 +323,10 @@ void handler(int peer_fd, const string &session_name) {
     } catch (handle_request_failure &e) {
         response_header["Content-Length"] = "0";
         send_response(peer_fd, format_header(response_header, e.what()));
+    } catch (redirect_exception &e) {
+        response_header["Content-Length"] = "0";
+        response_header["Location"] = e.get_url();
+        send_response(peer_fd, format_header(response_header, e.get_msg()));
     } catch (peer_completion&) {
 
     } catch (...) {

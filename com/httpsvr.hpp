@@ -18,6 +18,6 @@ void handler(int peerFd, const string &sessionName);
 
 #define REGISTER_CONTROLLER_CONCAT2(x, y) x##y
 #define REGISTER_CONTROLLER_CONCAT(x, y) REGISTER_CONTROLLER_CONCAT2(x, y)
-#define REGISTER_CONTROLLER(method, path, controller_lambda) static auto_executor<decltype(register_controller), const char*, const char*, controller> REGISTER_CONTROLLER_CONCAT(controller_lambda, __COUNTER__)(register_controller, method, path, controller_lambda)
+#define REGISTER_CONTROLLER(method, path, controller_lambda) static server_utils::auto_executor<decltype(http::register_controller), const char*, const char*, http::controller> REGISTER_CONTROLLER_CONCAT(controller_lambda, __COUNTER__)(http::register_controller, method, path, controller_lambda)
 
 }
