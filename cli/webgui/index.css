@@ -6,6 +6,7 @@ pre {
   
 .myclass + label {
     line-height: 1;
+    padding: 20px 20px 20px 20px;
     font-size: 2em;
     color: white;
     background-color:lightgray;
