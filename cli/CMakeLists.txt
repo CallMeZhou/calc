@@ -1,5 +1,5 @@
 execute_process(
-    COMMAND sh "-c" "ip -j route get 8.8.8.8 | jq '.[0]|.prefsrc'"
+    COMMAND sh "-c" "ip -j route get 8.8.8.8 | jq -r '.[0]|.prefsrc'"
     OUTPUT_VARIABLE _MYIP
 )
 

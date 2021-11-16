@@ -23,7 +23,7 @@ tuple<header_t, msgbuff_t> lambda_dump(const msgbuff_t &request, const args_t &a
     }
     cout << endl;
     
-    return {{}, msgbuff_t()};
+    return {header_t(), msgbuff_t()};
 }
 
 REGISTER_CONTROLLER("GET",    "dump", lambda_dump);
