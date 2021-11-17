@@ -8,7 +8,7 @@ _Abs... say what?_
 
 ## My Story
 
-[SKIP THE SHIT! Who wants your story?](#What-do-we-have?)
+[SKIP THE SHIT! Who wants your story?](#What-do-we-have)
 
 It was getting close to Xmas and I was a bit tired. 
 
