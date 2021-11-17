@@ -87,7 +87,29 @@ You need:
 
 Build steps:
 
-1. Clone the repository using Git (I will call it `"the source directory"`)
+1. Install `jq`
+
+Ubuntu:
+
+```sh
+sudo apt-get install jq
+```
+
+Manjaro:
+
+```sh
+sudo pacman -Syu jq
+```
+
+Confirm `jq` is working on your computer:
+
+```sh
+ip -j route get 8.8.8.8 | jq -r ".[0]|.prefsrc"
+```
+
+You should see the IP address that your computer uses to access the internet.
+
+2. Clone the repository using Git (I will call it `"the source directory"`)
 
 ```sh
 git clone git@bitbucket.org:agedboy/calc.git --recurse-submodules
@@ -96,26 +118,26 @@ git clone git@bitbucket.org:agedboy/calc.git --recurse-submodules
 
 Do not omit the `--recurse-submodules` option.
 
-2. Create a directory for the build outs (I will call it `"the build directory"`)
+3. Create a directory for the build outs (I will call it `"the build directory"`)
 
 ```sh
 mkdir <the build directory>
 ```
 
-3. `cd` into `<the build directory>` and cmake it.
+4. `cd` into `<the build directory>` and cmake it.
 
 ```sh
 cd <the build directory>
 cmake <the _source directory>
 ```
 
-4. Export an environment variable `CALC_SITE_HOME`. I recommand you put it in your `.bashrc` file.
+5. Export an environment variable `CALC_SITE_HOME`. I recommand you put it in your `.bashrc` file.
 
 ```sh
 export CALC_SITE_HOME=<the build directory>
 ```
 
-5. Run the server.
+6. Run the server.
 
 ```
 cd <the build directory>
