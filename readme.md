@@ -48,7 +48,7 @@ You really reached here? You did read it? Oh my... you are as bored as I am.
   - Ascii-Art website: converts pictures to ascii-art text blocks
     - Frontend: a static page to send picture and receive/show ascii-art text
     - Backend: one API to receive pictures and produce ascii-art text
-- With the API-binding mechanism, it is easy to add more web services
+- It is easy to add more web services with the API-binding mechanism
 
 ---
 
@@ -83,7 +83,7 @@ You need:
 - jq (a small Linux command line tool)
 - A working Internet/Intranet connection
 
-*(I, of course, assume you are a mighty C/C++ programmer with good understanding of web applications. I know you are, otherwise you won't get here.)*
+*(I assume you are a mighty C/C++ programmer with good understanding of web applications. I know you are, otherwise you won't get here.)*
 
 Build steps:
 
@@ -235,12 +235,14 @@ Alright, I will give you some very brief introduction to the code so that you co
 |[picojson](https://github.com/kazuho/picojson)|(submodule) A C++ JSON read/write library|
 |[stb](https://github.com/nothings/stb)|(submodule) The well-known picture format library|
 
-**Special thanks to all the four great github projects and their authors/contributors.**
+**Special thanks to the four great github projects and their authors/contributors.**
 
 
 ### The files
 
 I recommand you to read the source code files in the following order.
+
+*(More explanations are coming soon...)*
 
 ---
 
@@ -278,6 +280,8 @@ The trie-ish tree will be like:
 
 ```
                        [root]
+                          |
+                       [api]
                           |
           +---------------+-----------------+
           |                                 |

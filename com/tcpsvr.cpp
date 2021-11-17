@@ -12,6 +12,7 @@
 #include <vector>
 #include "tcpsvr.hpp"
 #include "utils.hpp"
+#include "thrdpool.hpp"
 #include "fmt/core.h"
 
 namespace server {
@@ -55,11 +56,13 @@ tcp::~tcp() {
     }
 }
 
-void tcp::online(function<void(int, const string &)> app_protocol) {
+void tcp::online(function<void(int, const string &)> app_protocol, int max_concurrency) {
     assert(sock != -1);
     assert(!listener.joinable());
 
-    listener = thread([this, app_protocol]() {
+    listener = thread([this, app_protocol, max_concurrency]() {
+        server_utils::thread_pool handler_pool(max_concurrency);
+
         while (!stopping) {
             if (listen(sock, listen_backlog) == -1) {
                 if (!stopping) perror("listen");
@@ -80,8 +83,7 @@ void tcp::online(function<void(int, const string &)> app_protocol) {
             getnameinfo(&peerAddr, peerAddrLen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV);
             string session_name = fmt::format("{}/{}", hbuf, sbuf); // just a name for debug purpose
 
-            // TODO do we need to take care of them when exiting
-            thread(app_protocol, peer, session_name).detach();
+            handler_pool.execute([app_protocol, peer, session_name](){ app_protocol(peer, session_name); });
         }
     });
 }

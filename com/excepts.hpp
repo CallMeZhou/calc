@@ -9,6 +9,11 @@ public:
     peer_completion(void) : std::runtime_error("") {}
 };
 
+class session_timeout : public std::runtime_error {
+public:
+    session_timeout(void) : std::runtime_error("") {}
+};
+
 class handle_request_failure : public std::runtime_error {
     std::string msg;
 public:

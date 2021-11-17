@@ -28,6 +28,7 @@ static constexpr size_t MAX_RECV_ONCE = 65536;
 static const regex HEADER_PATTERN(" *(.+?) *: *(.*?) *\r\n");
 static const array<char, 2> CR {'\r', '\n'};
 static const array<char, 4> CRCR {'\r', '\n', '\r', '\n'};
+static const int TIMEOUT = 10;
 
 /**
  * makes the name of a controller by the http method and the url-path
@@ -73,7 +74,11 @@ static msgbuff_t::const_iterator receive_header(int peer, msgbuff_t &request) {
         if (0 == recv_bytes) {
             throw peer_completion();
         } else if (recv_bytes < 0) {
-            throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
+            int e = errno;
+            if (e == EWOULDBLOCK|| e == EAGAIN)
+                throw session_timeout();
+            else
+                throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
 
         size_t append_pos = request.size();
@@ -140,7 +145,8 @@ static tuple<bool, int> process_header(const header_t &header) {
             throw handle_request_failure(400, fmt::format("Bad request due to unknown connection status '{}'.", connection));
         }
     } catch (...) {
-        keep_alive = true;
+        keep_alive = true; // TODO this should be false for HTTP/1.0, but it's no
+                           // big deal as the 1.0 clients should close the connection
     }
     
     try {
@@ -271,6 +277,13 @@ static tuple<controller, args_t> find_controller(const string &method, const str
     }
 }
 
+static void set_socket_timeout(int fd, int seconds) {
+    struct timeval tv;
+    tv.tv_sec = seconds;
+    tv.tv_usec = 0;
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+}
+
 /**
  * [API] the http protocol handling function. application system connects this API
  * to a initialized tcp server object. when a client connection is accepted, the 
@@ -291,6 +304,8 @@ void handler(int peer_fd, const string &session_name) {
     int       peer;
 
     try {
+        set_socket_timeout(peer_fd, TIMEOUT);
+        string keepAliveHeader = fmt::format("timeout={}", TIMEOUT);
         keep_alive = true;
         while (keep_alive) {
             
@@ -316,6 +331,7 @@ void handler(int peer_fd, const string &session_name) {
             // send back response
             response_header["Content-Length"] = fmt::format("{}", response.size());
             response_header["Access-Control-Allow-Origin"] = "*";
+            if (keep_alive) response_header["Keep-Alive"] = keepAliveHeader;
             send_response(peer_fd, format_header(response_header));
             send_response(peer_fd, response);
 
@@ -328,6 +344,8 @@ void handler(int peer_fd, const string &session_name) {
         response_header["Location"] = e.get_url();
         send_response(peer_fd, format_header(response_header, e.get_msg()));
     } catch (peer_completion&) {
+
+    } catch (session_timeout&) {
 
     } catch (...) {
         response_header["Content-Length"] = "0";

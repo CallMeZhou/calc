@@ -37,8 +37,10 @@ public:
      * The specified protocol handling function app_protocol will run in its
      * separate thread.
      * @param app_protocol the protocol handling function
+     * @param max_concurrency the maximum number of concurrent connections. 
+     * 0 means the maximum hardware concurrency plus 2.
      */
-    void online(function<void(int, const string &)> app_protocol);
+    void online(function<void(int, const string &)> app_protocol, int max_concurrency = 0);
     /**
      * Stops the listening thread.
      * @note those running protocol handling threads won't be shut down. You

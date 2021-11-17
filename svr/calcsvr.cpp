@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
         server::tcp server1(svc);
         fmt::print("Server is bound to port {}.\n", svc);
 
-        server1.online(http::handler);
+        server1.online(http::handler, (int) getconf("server/concurrency", 0.));
         puts("Server is online.");
 
         puts("Press any key to stop...");
