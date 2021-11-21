@@ -49,8 +49,8 @@ _荒……荒什么？_
 ![](dump.jpg)
 
 ### Ascii图服务
-![](doc/asca-1.jpg)
-![](doc/asca-2.jpg)
+![](asca-1.jpg)
+![](asca-2.jpg)
 
 感觉怎么样？有点意思了没？去从冰箱里拿瓶啤的出来，咱们继续。
 
