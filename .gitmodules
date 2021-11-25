@@ -13,3 +13,7 @@
 	path = picojson
 	url = git@github.com:kazuho/picojson.git
 	branch = master
+[submodule "clipp"]
+	path = clipp
+	url = git@github.com:muellan/clipp.git
+	branch = master

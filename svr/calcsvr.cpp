@@ -10,10 +10,14 @@ extern "C" {
 }
 
 int main(int argc, char* argv[]) {
+    const char *svc = argc > 1 ? argv[1] : "8000";
+
     try {
-        const char *svc = argc > 1 ? argv[1] : "8000";
-        server::tcp server1(svc, [](int peerfd){ 
-            return network_channel::tls_channel::factory(peerfd, add_home_dir(getconf("server/cert", "calc.cert")), add_home_dir(getconf("server/key", "calc.key")));
+        network_channel::tls_contex tls(add_home_dir(getconf("server/cert", "calc.cert")), add_home_dir(getconf("server/key", "calc.key")));
+        puts("Private key and certificate loaded. TLS ready.");
+
+        server::tcp server1(svc, [&tls](int peerfd){ 
+            return network_channel::tls_channel::factory(peerfd, tls);
         });
         fmt::print("Server is bound to port {}.\n", svc);
 

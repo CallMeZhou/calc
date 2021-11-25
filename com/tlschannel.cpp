@@ -30,25 +30,9 @@ namespace network_channel {
 using namespace std;
 using namespace server_excepts;
 
-tls_channel::tls_channel(int peerfd, const string &cert_file, const string &key_file)
-: peerfd(0), ossl_ctx(nullptr), ossl(nullptr) {
+tls_channel::tls_channel(int peerfd, SSL_CTX *ossl_ctx)
+: peerfd(0), ossl(nullptr) {
     try {
-        if (nullptr == (ossl_ctx = SSL_CTX_new(TLS_server_method()))) {
-            throw tls_exception();
-        }
-
-        if(SSL_CTX_use_certificate_file(ossl_ctx, cert_file.c_str(), SSL_FILETYPE_PEM) < 0) {
-            throw tls_exception();
-        }
-
-        if(SSL_CTX_use_PrivateKey_file(ossl_ctx, key_file.c_str(), SSL_FILETYPE_PEM) < 0) {
-            throw tls_exception();
-        }
-
-        if (1 != SSL_CTX_check_private_key(ossl_ctx)) {
-            throw tls_exception();
-        }
-
         if (nullptr == (ossl = SSL_new(ossl_ctx))) {
             throw tls_exception();
         }
@@ -62,7 +46,6 @@ tls_channel::tls_channel(int peerfd, const string &cert_file, const string &key_
         }
     } catch (tls_exception &e) {
         if (ossl) SSL_free(ossl);
-        if (ossl_ctx) SSL_CTX_free(ossl_ctx);
         throw e;
     }
 }
@@ -71,9 +54,6 @@ tls_channel::~tls_channel() {
     if (ossl) {
         SSL_shutdown(ossl);
         SSL_free(ossl);
-    }
-    if (ossl_ctx) {
-        SSL_CTX_free(ossl_ctx);
     }
 }
 
@@ -110,9 +90,40 @@ ssize_t tls_channel::send(const void *buf, size_t n, int flags) {
     }
 }
 
-
-channel* tls_channel::factory(int peerfd, const string &cert_file, const string &key_file) {
-    return new tls_channel(peerfd, cert_file, key_file);
+channel* tls_channel::factory(int peerfd, SSL_CTX *ossl_ctx) {
+    return new tls_channel(peerfd, ossl_ctx);
 }
+
+tls_contex::tls_contex(const string &cert_file, const string &key_file) : ossl_ctx(nullptr) {
+    try {
+        if (nullptr == (ossl_ctx = SSL_CTX_new(TLS_server_method()))) {
+            throw tls_exception();
+        }
+
+        if(SSL_CTX_use_certificate_file(ossl_ctx, cert_file.c_str(), SSL_FILETYPE_PEM) < 0) {
+            throw tls_exception();
+        }
+
+        if(SSL_CTX_use_PrivateKey_file(ossl_ctx, key_file.c_str(), SSL_FILETYPE_PEM) < 0) {
+            throw tls_exception();
+        }
+
+        if (1 != SSL_CTX_check_private_key(ossl_ctx)) {
+            throw tls_exception();
+        }
+    } catch (tls_exception &e) {
+        if (ossl_ctx) SSL_CTX_free(ossl_ctx);
+        throw e;
+    }
+}
+
+tls_contex::~tls_contex() {
+    SSL_CTX_free(ossl_ctx);
+}
+
+tls_contex::operator SSL_CTX* () {
+    return ossl_ctx;
+}
+
 
 }
