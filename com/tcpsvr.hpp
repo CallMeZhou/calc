@@ -4,10 +4,11 @@
 #include <map>
 #include <thread>
 #include <functional>
+#include "channel.hpp"
 
 namespace server {
-
 using namespace std;
+using namespace network_channel;
 
 /**
  * The TCP server that listens to connection requests from clients. It accepts
@@ -23,13 +24,15 @@ private:
     bool stopping;
     thread listener;
 
+    function<channel*(int)> channel_from_fd;
+
 public:
     /**
      * Constructs the TCP server instance and binds the port.
      * @param server the port number string (i.e., "8000") or the nickname of
      * some well-known ports (i.e., "ssh" for port 22, "telnet" for port 23).
      */
-    tcp(const string &serivce);
+    tcp(const string &serivce, function<channel*(int)> channel_factory);
     ~tcp();
     /**
      * Starts the listening thread. It accepts connections and launch an 
@@ -40,7 +43,7 @@ public:
      * @param max_concurrency the maximum number of concurrent connections. 
      * 0 means the maximum hardware concurrency plus 2.
      */
-    void online(function<void(int, const string &)> app_protocol, int max_concurrency = 0);
+    void online(function<void(channel*, const string&)> app_protocol, int max_concurrency = 0);
     /**
      * Stops the listening thread.
      * @note those running protocol handling threads won't be shut down. You

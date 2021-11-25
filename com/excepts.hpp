@@ -4,6 +4,13 @@
 
 namespace server_excepts {
 
+class tls_exception : public std::runtime_error {
+    std::string msg;
+public:
+    tls_exception(void);
+    const char* what(void) const noexcept override;
+};
+
 class peer_completion : public std::runtime_error {
 public:
     peer_completion(void) : std::runtime_error("") {}

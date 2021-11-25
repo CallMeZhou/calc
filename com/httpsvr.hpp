@@ -8,13 +8,15 @@
 #include <functional>
 #include "utils.hpp"
 #include "httptypes.hpp"
+#include "channel.hpp"
 
 namespace http {
 using namespace std;
 using namespace server_utils;
+using namespace network_channel;
 
 void register_controller(const string &method, const string &path, controller controllerLambda);
-void handler(int peerFd, const string &sessionName);
+void handler(channel *channel, const string &sessionName);
 
 #define REGISTER_CONTROLLER_CONCAT2(x, y) x##y
 #define REGISTER_CONTROLLER_CONCAT(x, y) REGISTER_CONTROLLER_CONCAT2(x, y)

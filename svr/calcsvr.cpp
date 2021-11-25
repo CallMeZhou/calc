@@ -12,7 +12,9 @@ extern "C" {
 int main(int argc, char* argv[]) {
     try {
         const char *svc = argc > 1 ? argv[1] : "8000";
-        server::tcp server1(svc);
+        server::tcp server1(svc, [](int peerfd){ 
+            return network_channel::tls_channel::factory(peerfd, add_home_dir(getconf("server/cert", "calc.cert")), add_home_dir(getconf("server/key", "calc.key")));
+        });
         fmt::print("Server is bound to port {}.\n", svc);
 
         server1.online(http::handler, (int) getconf("server/concurrency", 0.));

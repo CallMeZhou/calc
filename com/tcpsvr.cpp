@@ -13,11 +13,14 @@
 #include "tcpsvr.hpp"
 #include "utils.hpp"
 #include "thrdpool.hpp"
+#include "excepts.hpp"
 #include "fmt/core.h"
 
 namespace server {
+using namespace server_excepts;
 
-tcp::tcp(const string &serivce) : sock(-1), stopping(false) {
+tcp::tcp(const string &serivce, function<channel*(int)> channel_factory)
+: sock(-1), stopping(false), channel_from_fd(channel_factory) {
     int err;
 
     struct addrinfo req = {0};
@@ -56,7 +59,7 @@ tcp::~tcp() {
     }
 }
 
-void tcp::online(function<void(int, const string &)> app_protocol, int max_concurrency) {
+void tcp::online(function<void(channel*, const string &)> app_protocol, int max_concurrency) {
     assert(sock != -1);
     assert(!listener.joinable());
 
@@ -64,26 +67,31 @@ void tcp::online(function<void(int, const string &)> app_protocol, int max_concu
         server_utils::thread_pool handler_pool(max_concurrency);
 
         while (!stopping) {
-            if (listen(sock, listen_backlog) == -1) {
-                if (!stopping) perror("listen");
-                break;
+            try {
+                if (listen(sock, listen_backlog) == -1) {
+                    if (!stopping) perror("listen");
+                    break;
+                }
+
+                struct sockaddr peerAddr;
+                socklen_t peerAddrLen = sizeof(peerAddr);
+                int peer = accept(sock, &peerAddr, &peerAddrLen);
+
+                if (peer == -1) {
+                    if (stopping) break;
+                    perror("accept");
+                    continue;
+                }
+
+                char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+                getnameinfo(&peerAddr, peerAddrLen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV);
+                string session_name = fmt::format("{}/{}", hbuf, sbuf); // just a name for debug purpose
+
+                auto channel = channel_from_fd(peer);
+                handler_pool.execute([app_protocol, session_name, channel](){ app_protocol(channel, session_name); });
+            } catch (tls_exception &e) {
+                fmt::print("SSL failure when accepting client: {}\n", e.what());
             }
-
-            struct sockaddr peerAddr;
-            socklen_t peerAddrLen = sizeof(peerAddr);
-            int peer = accept(sock, &peerAddr, &peerAddrLen);
-
-            if (peer == -1) {
-                if (stopping) break;
-                perror("accept");
-                continue;
-            }
-
-            char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-            getnameinfo(&peerAddr, peerAddrLen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV);
-            string session_name = fmt::format("{}/{}", hbuf, sbuf); // just a name for debug purpose
-
-            handler_pool.execute([app_protocol, peer, session_name](){ app_protocol(peer, session_name); });
         }
     });
 }

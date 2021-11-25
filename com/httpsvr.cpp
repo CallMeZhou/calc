@@ -64,13 +64,13 @@ static args_t make_controller_args(const string &url) {
  * @return iterator of the data buffer that points to the next bytes of the
  * end-of-header sign.
  */
-static msgbuff_t::const_iterator receive_header(int peer, msgbuff_t &request) {
+static msgbuff_t::const_iterator receive_header(channel *channel, msgbuff_t &request) {
     request.clear();
     msgbuff_t::const_iterator header_end = request.end();
 
     while (request.end() == header_end /* TODO over-input prevention*/) {
         array<char, MAX_RECV_ONCE> recv_buff;
-        auto recv_bytes = recv(peer, recv_buff.data(), recv_buff.size(), 0);
+        auto recv_bytes = channel->recv(recv_buff.data(), recv_buff.size());
         if (0 == recv_bytes) {
             throw peer_completion();
         } else if (recv_bytes < 0) {
@@ -175,14 +175,18 @@ static tuple<string, args_t> controller_name_args(const string &url) {
  * @param peer socket fd
  * @param content_length the returned value of process_header
  */
-static void receive_body(int peer, int content_length, msgbuff_t &request) {
+static void receive_body(channel *channel, int content_length, msgbuff_t &request) {
     while(request.size() < content_length) { // contentLength is set by processHeader()
         array<char, MAX_RECV_ONCE> recv_buff;
-        int recv_bytes = recv(peer, recv_buff.data(), recv_buff.size(), 0);
+        int recv_bytes = channel->recv(recv_buff.data(), recv_buff.size());
         if (0 == recv_bytes) {
             throw peer_completion();
         } else if (recv_bytes < 0) {
-            throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request body.", errno));
+            int e = errno;
+            if (e == EWOULDBLOCK|| e == EAGAIN)
+                throw session_timeout();
+            else
+                throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
         request.insert(request.end(), recv_buff.begin(), recv_buff.begin() + recv_bytes);
     }
@@ -221,8 +225,8 @@ static string format_header(const header_t &header, const string &status = "") {
  * @param peer the socket fd
  * @param header the k-v map form of the http response header
  */
-static void send_response(int peer, const string &header) {
-    if(send(peer, header.c_str(), header.length(), 0) == 0) {
+static void send_response(channel *channel, const string &header) {
+    if(channel->send(header.c_str(), header.length()) == 0) {
         // TODO handle error
     }
 }
@@ -232,8 +236,8 @@ static void send_response(int peer, const string &header) {
  * @param peer the socket fd
  * @param body the response body
  */
-static void send_response(int peer, const msgbuff_t &body) {
-    if(send(peer, &body[0], body.size(), 0) == 0) {
+static void send_response(channel *channel, const msgbuff_t &body) {
+    if(channel->send(&body[0], body.size()) == 0) {
         // TODO handle error
     }
 }
@@ -289,7 +293,7 @@ static void set_socket_timeout(int fd, int seconds) {
  * to a initialized tcp server object. when a client connection is accepted, the 
  * tcp server will create a thread and run this function in the thread.
  */
-void handler(int peer_fd, const string &session_name) {
+void handler(channel *channel, const string &session_name) {
     fmt::print("Client {} was accepted by http session {}.\n", session_name, pthread_self());
 
     msgbuff_t request;
@@ -304,13 +308,13 @@ void handler(int peer_fd, const string &session_name) {
     int       peer;
 
     try {
-        set_socket_timeout(peer_fd, TIMEOUT);
+        set_socket_timeout(channel->get_fd(), TIMEOUT);
         string keepAliveHeader = fmt::format("timeout={}", TIMEOUT);
         keep_alive = true;
         while (keep_alive) {
             
             // receive and parse header
-            auto header_end_pos = receive_header(peer_fd, request);
+            auto header_end_pos = receive_header(channel, request);
             request_header = parse_header(request, header_end_pos);
             request.erase(request.begin(), header_end_pos); // not quite necessary...
 
@@ -323,7 +327,7 @@ void handler(int peer_fd, const string &session_name) {
 
             // receive request body
             tie(keep_alive, content_length) = process_header(request_header);
-            receive_body(peer_fd, content_length, request);
+            receive_body(channel, content_length, request);
 
             // call the application system to handle the request
             tie(response_header, response) = get<0>(controller)(request, get<1>(controller), query_args, request_header);
@@ -332,27 +336,26 @@ void handler(int peer_fd, const string &session_name) {
             response_header["Content-Length"] = fmt::format("{}", response.size());
             response_header["Access-Control-Allow-Origin"] = "*";
             if (keep_alive) response_header["Keep-Alive"] = keepAliveHeader;
-            send_response(peer_fd, format_header(response_header));
-            send_response(peer_fd, response);
+            send_response(channel, format_header(response_header));
+            send_response(channel, response);
 
         } // end of while (keep_alive)...
     } catch (handle_request_failure &e) {
         response_header["Content-Length"] = "0";
-        send_response(peer_fd, format_header(response_header, e.what()));
+        send_response(channel, format_header(response_header, e.what()));
     } catch (redirect_exception &e) {
         response_header["Content-Length"] = "0";
         response_header["Location"] = e.get_url();
-        send_response(peer_fd, format_header(response_header, e.get_msg()));
+        send_response(channel, format_header(response_header, e.get_msg()));
     } catch (peer_completion&) {
 
     } catch (session_timeout&) {
 
     } catch (...) {
         response_header["Content-Length"] = "0";
-        send_response(peer_fd, format_header(response_header, "500 Unexpected server internal error."));
+        send_response(channel, format_header(response_header, "500 Unexpected server internal error."));
     }
 
-    close(peer_fd);
     fmt::print("http session {} exited.\n", pthread_self());
 }
 

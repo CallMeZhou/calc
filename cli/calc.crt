@@ -1,0 +1,77 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            8e:74:15:4e:fb:3d:4d:6c:d6:93:37:43:d2:fb:48:99
+        Signature Algorithm: ecdsa-with-SHA256
+        Issuer: CN=agedboy
+        Validity
+            Not Before: Nov 25 13:06:52 2021 GMT
+            Not After : Nov  9 13:06:52 2024 GMT
+        Subject: C=CN, ST=Beijing, L=Beijing, O=Baarova Residencny Park, OU=C2-203, CN=calc/emailAddress=agedboy@gmail.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                RSA Public-Key: (2048 bit)
+                Modulus:
+                    00:e8:8a:57:10:b6:82:77:74:0f:2f:eb:f8:29:63:
+                    31:3f:3f:79:41:06:1e:bd:68:e4:84:b7:c1:ae:89:
+                    54:27:49:e2:05:e7:96:e2:43:b0:5d:3c:0a:38:ec:
+                    25:44:2c:66:52:4a:5a:0c:cc:78:d0:b8:25:a3:b9:
+                    d3:7b:55:69:7a:a6:aa:e1:40:93:87:89:86:c1:b7:
+                    77:a1:83:cf:3c:b9:e1:1e:5b:b9:1d:92:73:e3:cc:
+                    13:72:3f:7d:1a:0d:fb:30:f3:00:9e:1b:fa:d1:15:
+                    c3:e4:fa:5b:8c:b1:c2:0a:01:5a:95:35:5a:df:cc:
+                    92:41:6c:ad:c5:a6:6f:fd:fa:02:0a:86:fa:4a:7a:
+                    ba:e2:bb:95:7a:42:27:93:76:29:83:72:30:02:c7:
+                    d0:dc:0b:69:f3:1a:c8:26:29:68:6d:4a:bf:9e:58:
+                    a6:7d:1a:da:9c:27:f9:85:ca:b5:9b:3c:3e:dc:8c:
+                    d4:79:c7:96:8b:06:22:58:2c:4f:df:e5:16:1d:82:
+                    44:7c:17:40:e9:b7:d8:6c:ea:c7:60:3e:90:d1:70:
+                    11:b4:33:bd:de:b5:c3:59:a7:e4:ec:87:00:b0:7c:
+                    62:e0:cb:fc:dd:46:6a:d1:1b:69:9f:40:4f:79:19:
+                    4a:8d:a2:1d:07:e8:df:bd:63:7d:1d:52:57:67:d3:
+                    ff:4d
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                EE:8B:C2:5E:2C:9B:B6:A3:20:52:B3:1F:12:A2:8B:A2:9B:28:9E:6E
+            X509v3 Authority Key Identifier: 
+                keyid:49:8A:14:7E:91:EB:C7:32:47:A9:5A:CF:D1:59:A0:4A:E3:16:04:AF
+                DirName:/CN=agedboy
+                serial:03:F4:35:4D:D4:A9:DE:B9:6C:0D:D6:B8:C5:1B:BA:C0:10:86:9E:30
+
+            X509v3 Extended Key Usage: 
+                TLS Web Server Authentication
+            X509v3 Key Usage: 
+                Digital Signature, Key Encipherment
+            X509v3 Subject Alternative Name: 
+                DNS:calc
+    Signature Algorithm: ecdsa-with-SHA256
+         30:64:02:30:51:9d:fd:a2:1c:a0:c3:ae:ed:f6:ab:9a:6a:68:
+         7b:eb:66:87:99:71:37:bb:60:9f:d0:e2:8f:27:97:1d:a9:9d:
+         63:a6:13:16:c8:a5:fb:b2:fa:40:f5:a1:c1:da:f7:ee:02:30:
+         3a:11:1a:f9:87:34:e3:5d:d7:d7:c5:2a:fa:4e:0b:00:5a:07:
+         81:de:59:36:39:70:a3:58:fb:a8:f2:cd:30:f0:e8:48:07:c7:
+         d2:30:d0:0d:39:b5:67:4e:76:e1:b8:6d
+-----BEGIN CERTIFICATE-----
+MIIDQTCCAsigAwIBAgIRAI50FU77PU1s1pM3Q9L7SJkwCgYIKoZIzj0EAwIwEjEQ
+MA4GA1UEAwwHYWdlZGJveTAeFw0yMTExMjUxMzA2NTJaFw0yNDExMDkxMzA2NTJa
+MIGVMQswCQYDVQQGEwJDTjEQMA4GA1UECAwHQmVpamluZzEQMA4GA1UEBwwHQmVp
+amluZzEgMB4GA1UECgwXQmFhcm92YSBSZXNpZGVuY255IFBhcmsxDzANBgNVBAsM
+BkMyLTIwMzENMAsGA1UEAwwEY2FsYzEgMB4GCSqGSIb3DQEJARYRYWdlZGJveUBn
+bWFpbC5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDoilcQtoJ3
+dA8v6/gpYzE/P3lBBh69aOSEt8GuiVQnSeIF55biQ7BdPAo47CVELGZSSloMzHjQ
+uCWjudN7VWl6pqrhQJOHiYbBt3ehg888ueEeW7kdknPjzBNyP30aDfsw8wCeG/rR
+FcPk+luMscIKAVqVNVrfzJJBbK3Fpm/9+gIKhvpKerriu5V6QieTdimDcjACx9Dc
+C2nzGsgmKWhtSr+eWKZ9GtqcJ/mFyrWbPD7cjNR5x5aLBiJYLE/f5RYdgkR8F0Dp
+t9hs6sdgPpDRcBG0M73etcNZp+TshwCwfGLgy/zdRmrRG2mfQE95GUqNoh0H6N+9
+Y30dUldn0/9NAgMBAAGjga8wgawwCQYDVR0TBAIwADAdBgNVHQ4EFgQU7ovCXiyb
+tqMgUrMfEqKLopsonm4wTQYDVR0jBEYwRIAUSYoUfpHrxzJHqVrP0VmgSuMWBK+h
+FqQUMBIxEDAOBgNVBAMMB2FnZWRib3mCFAP0NU3Uqd65bA3WuMUbusAQhp4wMBMG
+A1UdJQQMMAoGCCsGAQUFBwMBMAsGA1UdDwQEAwIFoDAPBgNVHREECDAGggRjYWxj
+MAoGCCqGSM49BAMCA2cAMGQCMFGd/aIcoMOu7farmmpoe+tmh5lxN7tgn9DijyeX
+HamdY6YTFsil+7L6QPWhwdr37gIwOhEa+Yc0413X18Uq+k4LAFoHgd5ZNjlwo1j7
+qPLNMPDoSAfH0jDQDTm1Z0524bht
+-----END CERTIFICATE-----

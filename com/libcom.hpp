@@ -1,6 +1,8 @@
 #pragma once
 #include "excepts.hpp"
 #include "utils.hpp"
+#include "tcpchannel.hpp"
+#include "tlschannel.hpp"
 #include "tcpsvr.hpp"
 #include "httpsvr.hpp"
 #include "httpform.hpp"

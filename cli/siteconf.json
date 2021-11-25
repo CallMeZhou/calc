@@ -1,6 +1,8 @@
 {
     "server" : {
-        "concurrency" : 0
+        "concurrency" : 1,
+        "cert" : "calc.crt",
+        "key"  : "calc.key"
     },
 
     "webgui" : {
