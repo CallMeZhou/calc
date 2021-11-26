@@ -10,8 +10,6 @@ using namespace picojson;
 
 static const char* site_conf_filename = "siteconf.json";
 
-string site_home_dir = _getenv(SITE_HOME_ENVAR, "");
-
 const value& getconf(void) {
     static bool loaded = false;
     static value conf;
@@ -42,6 +40,11 @@ const char* getconf(const std::string &conf_path, const char *defval) {
     }
 }
 
+std::string& get_site_home(void) {
+    static string site_home_dir = _getenv(SITE_HOME_ENVAR, "");
+    return site_home_dir;
+}
+
 std::string add_home_dir(const std::string &sub_dir) {
-    return path(site_home_dir) / sub_dir;
+    return path(get_site_home()) / sub_dir;
 }

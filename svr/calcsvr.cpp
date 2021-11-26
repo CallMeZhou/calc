@@ -16,11 +16,12 @@ using namespace std;
 using namespace filesystem;
 using namespace clipp;
 using namespace server;
+using namespace server_utils;
 using namespace network_channel;
 
 int main(int argc, char* argv[]) {
-    string http_port = "8080";
-    string https_port = "8443";
+    string http_port = "1080";
+    string https_port = "1443";
     bool http_disabled = false;
     bool https_disabled = false;
     bool help = false;
@@ -29,7 +30,7 @@ int main(int argc, char* argv[]) {
         option("-s", "--ssl").doc(fmt::format("Override the default port for SSL/TLS protocol. It binds to {} if this option is omitted.", https_port)) & value("https port", https_port),
         option("--nohttp").set(http_disabled).doc(fmt::format("Disable HTTP connections. HTTP is enabled by default.")),
         option("--nossl").set(https_disabled).doc(fmt::format("Disable SSL/TLS connections. SSL/TLS is enabled by default.")),
-        option("--home").doc(fmt::format("Override the home directory path. If this option is omitted, it gets the path from the environment variable ${}. (whose current value is '{}'.)", SITE_HOME_ENVAR, site_home_dir)) & value("site home", site_home_dir),
+        option("--home").doc(fmt::format("Override the home directory path. If this option is omitted, it gets the path from the environment variable ${}. (whose current value is '{}'.)", SITE_HOME_ENVAR, get_site_home())) & value("site home", get_site_home()),
         option("-h", "--help").set(help).doc("Show usge help.")
     );
 
@@ -46,6 +47,8 @@ int main(int argc, char* argv[]) {
     try {
         puts("CALC http server at your service.");
 
+        thread_pool threads((int) getconf("server/concurrency", 0.));
+
         unique_ptr<tcp> http, https;
         unique_ptr<tls_contex> tls_ctx;
 
@@ -58,7 +61,7 @@ int main(int argc, char* argv[]) {
 
             fmt::print("HTTP server is bound to port {}.\n", http_port);
 
-            http->online(http::handler, (int) getconf("server/concurrency", 0.));
+            http->online(http::handler, threads);
 
             puts("HTTP server is online.");
         }
@@ -76,7 +79,7 @@ int main(int argc, char* argv[]) {
 
             fmt::print("HTTPS server is bound to port {}.\n", https_port);
 
-            https->online(http::handler, (int) getconf("server/concurrency", 0.));
+            https->online(http::handler, threads);
 
             puts("HTTPS server is online.");
         }

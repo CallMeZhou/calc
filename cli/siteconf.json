@@ -6,6 +6,6 @@
     },
 
     "webgui" : {
-        "workdir" : "cli/webgui"
+        "workdir" : "webgui"
     }
 }

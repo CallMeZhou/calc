@@ -59,12 +59,11 @@ tcp::~tcp() {
     }
 }
 
-void tcp::online(function<void(channel*, const string &)> app_protocol, int max_concurrency) {
+void tcp::online(function<void(channel*, const string &)> app_protocol, thread_pool &threads) {
     assert(sock != -1);
     assert(!listener.joinable());
 
-    listener = thread([this, app_protocol, max_concurrency]() {
-        server_utils::thread_pool handler_pool(max_concurrency);
+    listener = thread([this, app_protocol, &threads]() {
 
         while (!stopping) {
             try {
@@ -75,9 +74,9 @@ void tcp::online(function<void(channel*, const string &)> app_protocol, int max_
 
                 struct sockaddr peerAddr;
                 socklen_t peerAddrLen = sizeof(peerAddr);
-                int peer = accept(sock, &peerAddr, &peerAddrLen);
+                int peer_fd = accept(sock, &peerAddr, &peerAddrLen);
 
-                if (peer == -1) {
+                if (peer_fd == -1) {
                     if (stopping) break;
                     perror("accept");
                     continue;
@@ -87,10 +86,13 @@ void tcp::online(function<void(channel*, const string &)> app_protocol, int max_
                 getnameinfo(&peerAddr, peerAddrLen, hbuf, sizeof(hbuf), sbuf, sizeof(sbuf), NI_NUMERICHOST | NI_NUMERICSERV);
                 string session_name = fmt::format("{}/{}", hbuf, sbuf); // just a name for debug purpose
 
-                auto channel = channel_from_fd(peer);
-                handler_pool.execute([app_protocol, session_name, channel](){ app_protocol(channel, session_name); });
+                auto channel = channel_from_fd(peer_fd);
+                threads.execute([app_protocol, session_name, channel](){ app_protocol(channel, session_name); });
+
             } catch (tls_exception &e) {
+
                 fmt::print("SSL failure when accepting client: {}\n", e.what());
+
             }
         }
     });

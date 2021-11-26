@@ -1,15 +1,16 @@
-execute_process(
-    COMMAND sh "-c" "ip -j route get 8.8.8.8 | jq -r '.[0]|.prefsrc'"
-    OUTPUT_VARIABLE _MYIP
-)
+#configure_file(webgui/index.html webgui/index.html COPYONLY)
+#configure_file(webgui/index.css webgui/index.css COPYONLY)
+#configure_file(siteconf.json ${CMAKE_BINARY_DIR}/siteconf.json COPYONLY)
+#configure_file(calc.crt ${CMAKE_BINARY_DIR}/calc.crt COPYONLY)
+#configure_file(calc.key ${CMAKE_BINARY_DIR}/calc.key COPYONLY)
 
-string(REGEX REPLACE "\n$" "" _MYIP "${_MYIP}")
-
-#configure_file(webgui/index.html webgui/index.html @ONLY)
-configure_file(webgui/index.html webgui/index.html COPYONLY)
-
-configure_file(webgui/index.css webgui/index.css COPYONLY)
-
-configure_file(siteconf.json ${CMAKE_BINARY_DIR}/siteconf.json COPYONLY)
-configure_file(calc.crt ${CMAKE_BINARY_DIR}/calc.crt COPYONLY)
-configure_file(calc.key ${CMAKE_BINARY_DIR}/calc.key COPYONLY)
+file(GLOB_RECURSE cli_files RELATIVE ${CALC_SOURCE_DIR} ${CALC_SOURCE_DIR}/cli/*)
+list(FILTER cli_files EXCLUDE REGEX .*/CMakeLists.txt)
+foreach(cli_file ${cli_files})
+    set(copy_src ${CALC_SOURCE_DIR}/${cli_file})
+    set(copy_dst ${CMAKE_BINARY_DIR}/${cli_file})
+    if(NOT IS_DIRECTORY ${copy_src})
+        message(STATUS "copying file ${copy_src}")
+        configure_file(${copy_src} ${copy_dst} COPYONLY)
+    endif(NOT IS_DIRECTORY ${copy_src})
+endforeach(cli_file)
