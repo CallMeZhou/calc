@@ -50,7 +50,7 @@ function send_data(form) {
 	    document.getElementById("my-canvas").innerHTML = "Network error: " + http.status;
 	});
 	
-	http.open("POST", "https://@_MYIP@:8000/asca?requested-width=70");
+	http.open("POST", "https://www.calc-server.com:8000/asca?requested-width=70");
 	http.send(new FormData(form));
 }
 

@@ -5,7 +5,8 @@ execute_process(
 
 string(REGEX REPLACE "\n$" "" _MYIP "${_MYIP}")
 
-configure_file(webgui/index.html webgui/index.html @ONLY)
+#configure_file(webgui/index.html webgui/index.html @ONLY)
+configure_file(webgui/index.html webgui/index.html COPYONLY)
 
 configure_file(webgui/index.css webgui/index.css COPYONLY)
 

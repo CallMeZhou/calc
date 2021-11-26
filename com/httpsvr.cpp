@@ -28,7 +28,6 @@ static constexpr size_t MAX_RECV_ONCE = 65536;
 static const regex HEADER_PATTERN(" *(.+?) *: *(.*?) *\r\n");
 static const array<char, 2> CR {'\r', '\n'};
 static const array<char, 4> CRCR {'\r', '\n', '\r', '\n'};
-static const int TIMEOUT = 10;
 
 /**
  * makes the name of a controller by the http method and the url-path
@@ -281,13 +280,6 @@ static tuple<controller, args_t> find_controller(const string &method, const str
     }
 }
 
-static void set_socket_timeout(int fd, int seconds) {
-    struct timeval tv;
-    tv.tv_sec = seconds;
-    tv.tv_usec = 0;
-    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
-}
-
 /**
  * [API] the http protocol handling function. application system connects this API
  * to a initialized tcp server object. when a client connection is accepted, the 
@@ -308,8 +300,7 @@ void handler(channel *channel, const string &session_name) {
     int       peer;
 
     try {
-        set_socket_timeout(channel->get_fd(), TIMEOUT);
-        string keepAliveHeader = fmt::format("timeout={}", TIMEOUT);
+        string keepAliveHeader = fmt::format("timeout={}", channel->get_timeout());
         keep_alive = true;
         while (keep_alive) {
             

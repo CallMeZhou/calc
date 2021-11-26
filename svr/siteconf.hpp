@@ -47,4 +47,7 @@ double _getenv(const char *name, double defval) {
     return atof(_getenv(name, "0"));
 }
 
+constexpr auto SITE_HOME_ENVAR = "CALC_SITE_HOME";
+extern std::string site_home_dir;
+
 std::string add_home_dir(const std::string &sub_dir);

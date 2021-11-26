@@ -12,9 +12,10 @@ class tls_channel : public channel {
 public:
     tls_channel(int peerfd, SSL_CTX *ossl_ctx);
     virtual ~tls_channel();
-    virtual int get_fd(void) const;
-    virtual ssize_t recv (void *buf, size_t n, int flags = 0);
-    virtual ssize_t send (const void *buf, size_t n, int flags = 0);
+    virtual int get_timeout(void) const override;
+    virtual int get_fd(void) const override;
+    virtual ssize_t recv (void *buf, size_t n, int flags = 0) override;
+    virtual ssize_t send (const void *buf, size_t n, int flags = 0) override;
 
     static channel* factory(int peerfd, SSL_CTX *ossl_ctx);
 };

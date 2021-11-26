@@ -1,16 +1,25 @@
 #include <unistd.h>
-#include <utility>
 #include <sys/socket.h>
+#include <utility>
 #include "tcpchannel.hpp"
 
 namespace network_channel {
 using namespace std;
 
+static const int TIMEOUT = 10; // timeout for peer socket. 10 seconds.
+
 tcp_channel::tcp_channel(int peerfd) : peerfd(peerfd) {
+    struct timeval tv = {0};
+    tv.tv_sec = TIMEOUT;
+    setsockopt(peerfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 }
 
 tcp_channel::~tcp_channel() {
     close(peerfd);
+}
+
+int tcp_channel::get_timeout(void) const {
+    return TIMEOUT;
 }
 
 int tcp_channel::get_fd(void) const {

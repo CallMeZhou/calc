@@ -1,6 +1,6 @@
 {
     "server" : {
-        "concurrency" : 1,
+        "concurrency" : 0,
         "cert" : "calc.crt",
         "key"  : "calc.key"
     },
