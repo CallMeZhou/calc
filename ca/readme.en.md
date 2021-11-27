@@ -4,7 +4,7 @@ The "basics" doesn't require much brain power.
 
 The "basics" is easy.
 
-## The overall method
+## The theory
 
 ### What are SSL and symetric encryption?
 
@@ -105,3 +105,14 @@ As mentioned, the `digital signature` was encrypted by the CA's `private key`, s
 Most web browsers are released with a lot of pre-installed `public keys` of well-known CAs. In case a web server has a `certificate` containing a `digital signature` created by an unknown CA, you must install the CA's `public key`. This is usually unsafe for normal users. Microsoft Windows will prompt you warning message 2 times before a CA's `public key` is installed.
 
 But if you are developing your own web server, you usually will not bother asking a CA company for a `digital signature` as it is usually not for free. In this case, you need to create your own CA key pairs and use it to sign your web server's key pairs, and install your own CA's `public key`. We will see how to do this in the following section.
+
+## Create key pairs for test CA and test web server
+
+No worries. It is much much much easier than the above paragraphs. Just keep calm and carry on.
+
+In general, what we will do is to:
+
+1. Create 2 key pairs. One pair for the test CA, the other pair for the test web server. (i.e., for our CALC server)
+2. User the CA's key pair to sign the web server. To be more precise: use the CA's `private key` to turn the web server's `public key` into a `certificate`.
+3. Install the CA's `public key` into your browser (if you use Mozilla Firefox) or install it into your OS (if you use other broswers).
+
