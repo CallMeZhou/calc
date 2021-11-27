@@ -55,32 +55,23 @@ int main(int argc, char* argv[]) {
         if (not http_disabled) {
             puts("Starting HTTP server...");
 
-            http.reset(new tcp(http_port, [](int peerfd){ 
-                return network_channel::tcp_channel::factory(peerfd);
-            }));
-
+            http.reset(new tcp(http_port, [](int peerfd){ return network_channel::tcp_channel::factory(peerfd); }));
             fmt::print("HTTP server is bound to port {}.\n", http_port);
 
             http->online(http::handler, threads);
-
             puts("HTTP server is online.");
         }
 
         if (not https_disabled) {
             puts("Loading certificate and private key...");
-
             tls_ctx.reset(new tls_contex(add_home_dir(getconf("server/cert", "calc.cert")), add_home_dir(getconf("server/key", "calc.key"))));
 
             puts("Starting HTTPS server...");
 
-            https.reset(new tcp(https_port, [&tls_ctx](int peerfd){ 
-                return network_channel::tls_channel::factory(peerfd, *tls_ctx.get());
-            }));
-
+            https.reset(new tcp(https_port, [&tls_ctx](int peerfd){ return network_channel::tls_channel::factory(peerfd, *tls_ctx.get()); }));
             fmt::print("HTTPS server is bound to port {}.\n", https_port);
 
             https->online(http::handler, threads);
-
             puts("HTTPS server is online.");
         }
 

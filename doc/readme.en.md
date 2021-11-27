@@ -6,29 +6,13 @@ _Abs... say what?_
 
 ---
 
-## My Story
+## Why?
 
-[SKIP THE SHIT! Who wants your story?](#main)
+[I don't care why --->](#main)
 
-It was getting close to Xmas and I was a bit tired. 
+I just wanted to practise creating my first Docker image at the very beginning. I wanted to pack something that is more interesting then the "busy box".
 
-I wanted to do something to amuse myself but alcohol, video games, and my right hand, none of them worked.
-
-I started to learn Docker... shhh... hey, I know I should have done it a decade before.
-
-So, I was thinking what I could put in my first Docker image?
-
-A ridiculous hello-world program? No.
-
-What about a hello-world REST backend with a Tomcat? Better, but... to be honest, you are not "creating" programs when working with Spring framework --- you are just following the rules.
-
-Is there anything really interesting to put in the package?
-
-It is my very first Docker image so it has to be special.
-
-As you can guess, an absurd idea jumped into my mind --- **I will not create the http-based application, instead, I will create the http base.**
-
-You really reached here? You did read it? Oh my... you are as bored as I am.
+I thought about a hello-world REST backend with a Tomcat. Then I thought it must interesting to create a server without relying on the Tomcas and Spring-boot. Then I thought it must the challenging to create it using C or C++. Lastly, I totally forgot about the Docker thing, because the C++ http server project is sooooo interesting.
 
 ---
 
@@ -42,6 +26,7 @@ You really reached here? You did read it? Oh my... you are as bored as I am.
   - Sends responses
   - Utility to support multi-part/form-data
   - Utility to support static page directory
+- HTTPS support
 - Sample web services
   - Echo: accepts message from ?msg=... and echos it back
   - Dump: prints query/header parameters and request body to the console
@@ -80,34 +65,22 @@ You need:
   - C++17
   - std::filesystem
 - CMake 3+
-- jq (a small Linux command line tool)
+- openssl-dev (for Debian-based systems)
 - A working Internet/Intranet connection
 
 *(I assume you are a mighty C/C++ programmer with good understanding of web applications. I know you are, otherwise you won't get here.)*
 
 Build steps:
 
-1. Install `jq`
+1. Install `libssl-dev`
 
 Ubuntu:
 
 ```sh
-sudo apt-get install jq
+sudo apt-get install libssl-dev
 ```
 
-Manjaro:
-
-```sh
-sudo pacman -Syu jq
-```
-
-Confirm `jq` is working on your computer:
-
-```sh
-ip -j route get 8.8.8.8 | jq -r ".[0]|.prefsrc"
-```
-
-You should see the IP address that your computer uses to access the internet.
+Manjaro: no need.
 
 2. Clone the repository using Git (I will call it `"the source directory"`)
 
@@ -144,20 +117,28 @@ export CALC_SITE_HOME=<the build directory>
 cd <the build directory>
 bin/svr
 
-Server is bound to port 8000.
-Server is online.
-Press any key to stop...
+CALC http server at your service.
+Starting HTTP server...
+HTTP server is bound to port 1080.
+HTTP server is online.
+Loading certificate and private key...
+Starting HTTPS server...
+HTTPS server is bound to port 1443.
+HTTPS server is online.
+All servers are up online, press any key to stop...
 ```
 
-If the default port 8000 is in use in your computer, run the server by: "`bin/svr [a-port-number]`". Such as: "`bin/svr 8008`".
+If the default port 1080 is in use in your computer, run the server by: "`bin/svr -p [a-port-number]`". Such as: "`bin/svr --port 8000`". (run `bin/svr -h` for more command options.)
 
 The URL of the three web services:
 
-ECHO: `http://<your ip>:8000/echo?msg=xxxx`
+ECHO: `http://<your ip>:1080/echo?msg=xxxx`
 
-DUMP: `http://<your ip>:8000/dump`
+DUMP: `http://<your ip>:1080/dump`
 
-ASCII-ART: `http://<your ip>:8000/asca[?requested-width=<a pixel width>]`
+ASCII-ART: `http://<your ip>:1080/asca[?requested-width=<a pixel width>]`
+
+*(To play with the ASCII-ART service, just visit the URL: `http://<your ip>:1080/` using your web browser.)*
 
 The ASCII-ART requires the picture file to be sent with `multi-part/formdata`. The form must have at least one entry carrying the raw picture file data. The name in the `Content-Disposition` must be `asca-source-image`. It supports `JPG`, `PNG`, `GIF`, `TIFF`, `BMP`, and `HDR`.
 
@@ -217,6 +198,16 @@ agedboy@5R3RZY2:~$
 
 ---
 
+## Try HTTPS
+
+When you pull and build this project, the server's private key and certificate created and signed by me will be automatically copied into the build directory. However, if you want to visit the HTTPS site, you must install my CA certificate in your computer as a root certificate, which means you must trust me.
+
+If you are experienced with CA certificate, just find the file "ca.pem" in the "\<project>/ca" directory and install it, then you can visit the demo site using `https://<your ip>:1443/`.
+
+If you would like to know some fundamental knowledge about SSL and the certificates, [please read this doc](../ca/readme.en.md).
+
+---
+
 ## Understanding the code and design
 
 If you decide to stay with me and deep dive into the implementation, please accept my greatest appreciation !!
@@ -234,9 +225,10 @@ Alright, I will give you some very brief introduction to the code so that you co
 |[fmt](https://github.com/fmtlib/fmt)|(submodule) A C++ format template library|
 |[keypress](https://github.com/MichaelDipperstein/keypress)|(submodule) For "press any key to continue..."|
 |[picojson](https://github.com/kazuho/picojson)|(submodule) A C++ JSON read/write library|
+|[clipp](https://github.com/muellan/clipp)|(submodule) A command line parser library|
 |[stb](https://github.com/nothings/stb)|(submodule) The well-known picture format library|
 
-**Special thanks to the four great github projects and their authors/contributors.**
+**Special thanks to the five great github projects and their authors/contributors.**
 
 
 ### The files

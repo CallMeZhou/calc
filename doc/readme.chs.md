@@ -8,21 +8,22 @@ _荒……荒什么？_
 
 ---
 
-## 我的故事
+## 为什么做这个？
 
-[谁要听你的鬼故事，请直奔主题吧](#main)
+[请直奔主题吧](#main)
 
-2021年圣诞节快到，我一个人下班回到家，坐在安静的屋子里，略感疲惫。我很想找点乐子，但是喝酒、游戏、右手，它们统统失去了吸引力。于是我想起应该学学Docker。我知道，十年前就该学的，但我一直犯懒。
+现在是2021年圣诞节前夕，我一个人下班回到家，坐在安静的屋子里，略感疲惫。很想找点乐子，但是喝酒、游戏、右手，它们统统失去了吸引力。于是便有了这个CALC Server项目。
 
-看了几页新手教程，觉得我也得做自己的Docker image对吧？我该打包些什么进去呢？打包一个Hello World程序未免太无聊了。要不，用Spring boot写一个简单的网站后台？这个虽然更对得起Docker，但是写Spring boot应用这件事本身太无趣了，不是吗？
+一开始其实是想试着做个Docker image，但不知道往里放什么好。后来想，要不用Spring boot + Tomcat + mysql做个简单的web后端吧？但又觉得没意思。于是想：不用Spring boot + Tomcat能做web后端吗？用C或者C++能可以吗？
 
-于是一个主意跳进我脑子里：用C++写一个HTTP服务器吧！看看我最远能走多远。与其写个基于HTTP服务器的web应用，不如写HTTP服务器本身。如果你读完了我的故事，说明你跟我一样无聊。那正好，一起来吧。
+最后没想到，用C++做HTTP服务器这么好玩。
 
 ---
 
 ## <a id="main"> 已经实现了什么？</a>
 
 - 一个TCP侦听服务器
+- 对HTTP和HTTPS同时支持
 - 一个HTTP协议的基础处理器，它可以:
   - 接收请求
   - 解析查询参数（就是问号后面的部分），以及HTTP头中参数（就是请求header中的部分）
@@ -66,42 +67,30 @@ _荒……荒什么？_
   - C++17
   - std::filesystem
 - CMake 3+
-- jq (一个很小的Linux工具，编译生成时需要用一小下)
+- libssl-dev（据说基于Debian的系统会需要手动安装，而基于Arch的不用）
 - 你的机器得能联网对吧
 
 *(接下来我假设你是个高能C++程序员，并且熟悉基本的web应用架构同时用过一点Spring，因此我不会从人是猴变的开始讲)*
 
 编译生成步骤:
 
-1. 安装`jq`。
+1. 安装`libssl`
 
 Ubuntu:
 
 ```sh
-sudo apt-get install jq
+sudo apt-get install libssl-dev
 ```
 
-Manjaro:
-
-```sh
-sudo pacman -Syu jq
-```
+Manjaro:不用装。
 
 使用其他分发版本的，根据自己的系统来安装它。
-
-请尝试运行下面命令以确认`jq`已经可用:
-
-```sh
-ip -j route get 8.8.8.8 | jq -r ".[0]|.prefsrc"
-```
-
-上面命令应该可以打印出你的机器中目前用于上网的网卡的IP地址。
 
 2. 下载本项目（这一步生成的文件夹，在后文中称为“源文件夹”）。
 
 ```sh
 git clone git@bitbucket.org:agedboy/calc.git --recurse-submodules
-
+# 假设下载到了这个路径：/home/han-meimei/dev/calc
 ```
 
 注意别遗漏`--recurse-submodules`选项。
@@ -110,6 +99,8 @@ git clone git@bitbucket.org:agedboy/calc.git --recurse-submodules
 
 ```sh
 mkdir <建造文件夹>
+# 比如可以生成到这里：/home/han-meimei/dev/calc/build
+# 如果你使用vs code，则将建造文件夹创建在项目根目录下是其默认行为
 ```
 
 4. `cd`进入建造文件夹，并开始编译生成。
@@ -118,12 +109,14 @@ mkdir <建造文件夹>
 cd <建造文件夹>
 cmake <源文件夹>
 cmake --build .
+# 比如：cmake .. && cmake --build .
 ```
 
 5. 添加一个环境变量`CALC_SITE_HOME`。建议将下面这句添加到你的`.bashrc`文件中.
 
 ```sh
-export CALC_SITE_HOME=<建造文件夹>
+export CALC_SITE_HOME=<建造文件夹>/cli
+# 比如：export CALC_SITE_HOME=/home/han-meimei/dev/calc/build/cli
 ```
 
 6. 启动服务器。
@@ -132,12 +125,18 @@ export CALC_SITE_HOME=<建造文件夹>
 cd <建造文件夹>
 bin/svr
 
-Server is bound to port 8000.
-Server is online.
-Press any key to stop...
+CALC http server at your service.
+Starting HTTP server...
+HTTP server is bound to port 1080.
+HTTP server is online.
+Loading certificate and private key...
+Starting HTTPS server...
+HTTPS server is bound to port 1443.
+HTTPS server is online.
+All servers are up online, press any key to stop...
 ```
 
-如果默认端口8000已被占用，或者被屏蔽，可以用这样的命令行启动服务器："`bin/svr [其他可用的端口号]`"，比如: "`bin/svr 8008`"。
+如果默认端口1080已被占用，或者被屏蔽，可以用这样的命令行启动服务器："`bin/svr --port [其他可用的端口号]`"，比如: "`bin/svr --port 8000`"。
 
 服务器启动好之后，可以用下面的URL访问示例服务：
 
@@ -147,9 +146,11 @@ DUMP：`http://<your ip>:8000/dump`
 
 ASCII图：`http://<your ip>:8000/asca[?requested-width=<a pixel width>]`
 
+*（可以用浏览器访问`http://127.0.0.1:1080/webgui/index.html`试试ASCII图功能。）*
+
 ASCII图服务要求通过`multi-part/formdata`来发送图片文件的原始数据（不用预先解码）。form中必须有至少一项，其头部的`Content-Disposition`为`asca-source-image`，然后其内容为图片文件的原始数据。可支持`JPG`、`PNG`、`GIF`、`TIFF`、`BMP`和`HDR`格式。
 
-可以用下面的`curl`命令来简单测试ASCII图服务，以便万一前端在你的机器不能用：
+也可以用下面的`curl`命令来简单测试ASCII图服务，以便万一前端在你的机器不能用：
 
 ```sh
 curl -F "asca-source-image=@<a picture file>" "http://<你机器的IP地址>:8000/asca" --output -
@@ -202,6 +203,14 @@ oo####+.               o+.+o    +###o
             .oo.oo.o.oo.o..oo.
 agedboy@5R3RZY2:~$
 ```
+
+---
+
+## 想是一下HTTPS吗？
+
+**如果你已经有SSL相关经验并且信得过我**，那直接是一下吧！你下载的项目文件中，有一个叫`ca`的文件夹，里面有个叫`ca.pem`的文件。那就是我用于创建站点私钥和证书的CA证书。你导入到你的浏览器或者操作系统里之后，就可以访问`https://localhost:1443/webgui/index.html`了。
+
+如果你还不太清楚SSL，但想了解一下，[请读这个文档](../ca/readme.chs.md)。
 
 ---
 
