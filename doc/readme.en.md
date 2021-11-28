@@ -10,9 +10,9 @@ _Abs... say what?_
 
 [I don't care why --->](#main)
 
-I just wanted to practise creating my first Docker image at the very beginning. I wanted to pack something that is more interesting then the "busy box".
+At the very beginning, I just wanted to practise creating my first Docker image. I wanted to pack something that is more interesting then the "busy box".
 
-I thought about a hello-world REST backend with a Tomcat. Then I thought it must interesting to create a server without relying on the Tomcas and Spring-boot. Then I thought it must the challenging to create it using C or C++. Lastly, I totally forgot about the Docker thing, because the C++ http server project is sooooo interesting.
+I thought about a hello-world REST backend with a Tomcat. Then I thought it must be interesting to create a server without relying on the Tomcas and Spring-boot. Then I thought it must be challenging to create it using C or C++. Lastly, I totally forgot about the Docker thing, because the C++ http server project is sooooo interesting.
 
 ---
 
