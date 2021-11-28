@@ -204,7 +204,7 @@ When you pull and build this project, the server's private key and certificate c
 
 If you are experienced with CA certificate, just find the file "ca.pem" in the "\<project>/ca" directory and install it, then you can visit the demo site using `https://<your ip>:1443/`.
 
-If you would like to know some fundamental knowledge about SSL and the certificates, [please read this doc](../ca/readme.en.md).
+If you would like to know some fundamental knowledge about SSL and the certificates, [please read this doc](./ca.en.md).
 
 ---
 
