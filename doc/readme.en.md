@@ -108,7 +108,7 @@ cmake --build .
 5. Export an environment variable `CALC_SITE_HOME`. I recommand you put it in your `.bashrc` file.
 
 ```sh
-export CALC_SITE_HOME=<the build directory>
+export CALC_SITE_HOME=<the build directory>/cli
 ```
 
 6. Run the server.
