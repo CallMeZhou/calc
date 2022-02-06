@@ -33,7 +33,7 @@ using namespace server_excepts;
 static const int TIMEOUT = 10; // timeout for peer socket. 10 seconds.
 
 tls_channel::tls_channel(int peerfd, SSL_CTX *ossl_ctx)
-: peerfd(0), ossl(nullptr) {
+: peerfd(peerfd), ossl(nullptr) {
     struct timeval tv = {0};
     tv.tv_sec = TIMEOUT;
     setsockopt(peerfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
@@ -61,6 +61,7 @@ tls_channel::~tls_channel() {
         SSL_shutdown(ossl);
         SSL_free(ossl);
     }
+    close(peerfd);
 }
 
 int tls_channel::get_timeout(void) const {

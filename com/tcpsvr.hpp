@@ -5,6 +5,7 @@
 #include <thread>
 #include <functional>
 #include "channel.hpp"
+#include <sys/epoll.h>
 #include "thrdpool.hpp"
 
 namespace server {
@@ -22,11 +23,21 @@ public:
     static const int listen_backlog = 50;
 
 private:
-    int sock;
-    bool stopping;
+    int epfd;
+    int listen_sock;
+    int quit_event;
     thread listener;
 
+    using connection = struct {
+        string name;
+        shared_ptr<channel> chann;
+    };
+    map<int, connection> connection_map;
+
     function<channel*(int)> channel_from_fd;
+
+    void add_new_peer(int peer_fd, const string &name);
+    connection& find_peer_by_fd(int peer_fd);
 
 public:
     /**

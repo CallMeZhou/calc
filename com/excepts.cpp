@@ -25,4 +25,13 @@ const char* redirect_exception::get_url(void) const {
     return new_url.c_str();
 }
 
+errno_exception::errno_exception(const std::string &errMsg, int err_num) : runtime_error("") {
+    msg = fmt::format("{}\nError details: {}", errMsg, strerror(err_num));
+}
+
+const char* errno_exception::what() const noexcept {
+    return msg.c_str();
+}
+
+
 }

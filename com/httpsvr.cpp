@@ -281,9 +281,10 @@ static tuple<controller, args_t> find_controller(const string &method, const str
 }
 
 /**
- * [API] the http protocol handling function. application system connects this API
- * to a initialized tcp server object. when a client connection is accepted, the 
- * tcp server will create a thread and run this function in the thread.
+ * [API] the http protocol handling function. the application system connects this API 
+ * to an initialized tcp server object. when a request if received from a client, the 
+ * tcp server picks up a thread in the pool and runs this function. One execution only
+ * handles request.
  */
 void handler(channel *channel, const string &session_name) {
     fmt::print("Client {} was accepted by http session {}.\n", session_name, pthread_self());
@@ -302,35 +303,35 @@ void handler(channel *channel, const string &session_name) {
     try {
         string keepAliveHeader = fmt::format("timeout={}", channel->get_timeout());
         keep_alive = true;
-        while (keep_alive) {
             
-            // receive and parse header
-            auto header_end_pos = receive_header(channel, request);
-            request_header = parse_header(request, header_end_pos);
-            request.erase(request.begin(), header_end_pos); // not quite necessary...
+        // receive and parse header
+        auto header_end_pos = receive_header(channel, request);
+        request_header = parse_header(request, header_end_pos);
+        request.erase(request.begin(), header_end_pos); // not quite necessary...
 
-            // handle the start line of the request
-            tie(method, url, version) = parse_start_line(request_header);
-            tie(query_name, query_args) = controller_name_args(url);
+        // handle the start line of the request
+        tie(method, url, version) = parse_start_line(request_header);
+        tie(query_name, query_args) = controller_name_args(url);
 
-            // find the controller function
-            auto controller = find_controller(method, query_name);
+        // find the controller function
+        auto controller = find_controller(method, query_name);
 
-            // receive request body
-            tie(keep_alive, content_length) = process_header(request_header);
-            receive_body(channel, content_length, request);
+        // receive request body
+        tie(keep_alive, content_length) = process_header(request_header);
+        receive_body(channel, content_length, request);
 
-            // call the application system to handle the request
-            tie(response_header, response) = get<0>(controller)(request, get<1>(controller), query_args, request_header);
+        // call the application system to handle the request
+        tie(response_header, response) = get<0>(controller)(request, get<1>(controller), query_args, request_header);
 
-            // send back response
-            response_header["Content-Length"] = fmt::format("{}", response.size());
-            response_header["Access-Control-Allow-Origin"] = "*";
-            if (keep_alive) response_header["Keep-Alive"] = keepAliveHeader;
-            send_response(channel, format_header(response_header));
-            send_response(channel, response);
+        // send back response
+        response_header["Content-Length"] = fmt::format("{}", response.size());
+        response_header["Access-Control-Allow-Origin"] = "*";
+        if (keep_alive) response_header["Keep-Alive"] = keepAliveHeader;
+        send_response(channel, format_header(response_header));
+        send_response(channel, response);
 
-        } // end of while (keep_alive)...
+        // TODO: re-enable the peer_fd in epoll
+
     } catch (handle_request_failure &e) {
         response_header["Content-Length"] = "0";
         send_response(channel, format_header(response_header, e.what()));
