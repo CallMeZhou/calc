@@ -287,7 +287,7 @@ static tuple<controller, args_t> find_controller(const string &method, const str
  * handles request.
  */
 void handler(channel *channel, const string &session_name) {
-    fmt::print("Client {} was accepted by http session {}.\n", session_name, pthread_self());
+    // TODO debug_log -> Client {session_name} was accepted by thread {pthread_self()}.
 
     msgbuff_t request;
     header_t  request_header;
@@ -330,8 +330,6 @@ void handler(channel *channel, const string &session_name) {
         send_response(channel, format_header(response_header));
         send_response(channel, response);
 
-        // TODO: re-enable the peer_fd in epoll
-
     } catch (handle_request_failure &e) {
         response_header["Content-Length"] = "0";
         send_response(channel, format_header(response_header, e.what()));
@@ -339,16 +337,14 @@ void handler(channel *channel, const string &session_name) {
         response_header["Content-Length"] = "0";
         response_header["Location"] = e.get_url();
         send_response(channel, format_header(response_header, e.get_msg()));
-    } catch (peer_completion&) {
-
-    } catch (session_timeout&) {
-
+    } catch (peer_completion &e) {
+        throw e;
+    } catch (session_timeout &e) {
+        throw e;
     } catch (...) {
         response_header["Content-Length"] = "0";
         send_response(channel, format_header(response_header, "500 Unexpected server internal error."));
     }
-
-    fmt::print("http session {} exited.\n", pthread_self());
 }
 
 }

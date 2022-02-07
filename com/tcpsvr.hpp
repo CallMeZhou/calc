@@ -1,4 +1,5 @@
 #pragma once
+#include <mutex>
 #include <string>
 #include <vector>
 #include <map>
@@ -20,10 +21,11 @@ using namespace network_channel;
  */
 class tcp {
 public:
-    static const int listen_backlog = 50;
+    static constexpr int listen_backlog   = 50;
+    static constexpr int max_epoll_events = 16;
 
 private:
-    int epfd;
+    int ep_fd;
     int listen_sock;
     int quit_event;
     thread listener;
@@ -33,11 +35,12 @@ private:
         shared_ptr<channel> chann;
     };
     map<int, connection> connection_map;
-
+    mutex connection_map_lock;
     function<channel*(int)> channel_from_fd;
 
     void add_new_peer(int peer_fd, const string &name);
     connection& find_peer_by_fd(int peer_fd);
+    string hangup_peer_by_fd(int peer_fd);
 
 public:
     /**
