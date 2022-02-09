@@ -44,8 +44,6 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    https_disabled = true;
-
     try {
         puts("CALC http server at your service.");
 

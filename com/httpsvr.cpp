@@ -75,7 +75,7 @@ static msgbuff_t::const_iterator receive_header(channel *channel, msgbuff_t &req
         } else if (recv_bytes < 0) {
             int e = errno;
             if (e == EWOULDBLOCK|| e == EAGAIN)
-                throw session_timeout();
+                throw io_timeout();
             else
                 throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
@@ -126,8 +126,7 @@ static tuple<string, string, string> parse_start_line(const header_t& header) {
 }
 
 /**
- * extracts information from the http header that the http protocol implementation
- * concers.
+ * extracts information from the http header that the http protocol cares about.
  * @param header the returned value of parse_header
  * @return a tuple containing the keep-alive and Content-Length
  */
@@ -183,7 +182,7 @@ static void receive_body(channel *channel, int content_length, msgbuff_t &reques
         } else if (recv_bytes < 0) {
             int e = errno;
             if (e == EWOULDBLOCK|| e == EAGAIN)
-                throw session_timeout();
+                throw io_timeout();
             else
                 throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
@@ -339,7 +338,7 @@ void handler(channel *channel, const string &session_name) {
         send_response(channel, format_header(response_header, e.get_msg()));
     } catch (peer_completion &e) {
         throw e;
-    } catch (session_timeout &e) {
+    } catch (io_timeout &e) {
         throw e;
     } catch (...) {
         response_header["Content-Length"] = "0";

@@ -23,13 +23,42 @@ namespace server {
 using namespace std;
 using namespace server_excepts;
 
+/**
+ * Calls accept() for an income peer and creates a unique string name for the connection.
+ * @param listen_sock the listening socket fd.
+ * @return the accepted/connected peer fd and a unique string name for the connection.
+ */
 static tuple<int, string> my_accept(int listen_sock);
+/**
+ * Puts an fd in non-block mode.
+ * @param fd the fd to be modified.
+ */
 static void set_fd_nonblock(int fd);
+/**
+ * Adds an fd to the epoll.
+ * @param ep_fd the epoll fd.
+ * @param new_fd the new fd to be added.
+ * @param events the events to be monitored by the epoll.
+ */
 static void add_fd_to_epoll(int ep_fd, int new_fd, int events);
+/**
+ * Modifies epoll event flags for an fd.
+ * @param ep_fd the epoll fd.
+ * @param new_fd the new fd to be added.
+ * @param events the events to be monitored by the epoll.
+ */
 static void update_fd_in_epoll(int ep_fd, int peer_fd, int events);
+/**
+ * Removes an fd from the epoll.
+ * @param ep_fd the epoll fd.
+ * @param new_fd the new fd to be added.
+ */
 static void remove_fd_from_epoll(int ep_fd, int peer_fd);
 
-static constexpr int EPOLL_TIMEOUT = 10;
+/**
+ * The time-out for the epol_wait().
+ */
+static constexpr int EPOLL_TIMEOUT = 10; // 10 seconds
 
 void tcp::add_new_peer(int peer_fd, const string &name) {
     scoped_lock lock(connection_map_lock);
@@ -146,6 +175,8 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
 
             if (-1 == nfds) {
                 if (errno == EINTR) {
+                    // the epoll_wait timed out or was interrupted. we take this chance to do house keep, 
+                    // removing all peers that have been idol for a while (see base_channel::IDOL_TIMEOUT).
                     refresh_peers();
                     continue;
                 } else {
@@ -161,7 +192,7 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
                 try {
                     if (fd_of_events == quit_event) { // server is quitting
 
-                        puts("stopping main server loop...");
+                        fmt::print("stopping main server loop...");
                         stopping = true;
                         break;
 
@@ -172,11 +203,11 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
                         string conn_name;
                         tie(peer_fd, conn_name) = my_accept(listen_sock);
 
-                        deferred close_peer_fd_if_except_thrown([peer_fd](void) { close(peer_fd); });
+                        deferred close_peer_fd_if_exception_thrown([peer_fd](void) { close(peer_fd); });
                         // create channel object for peer (and save it in internal map)
                         add_new_peer(peer_fd, conn_name);
                         fmt::print("client {} accepted on fd:{}.\n", conn_name, peer_fd);
-                        close_peer_fd_if_except_thrown.cancel();
+                        close_peer_fd_if_exception_thrown.cancel();
 
                     } else if (events & (EPOLLHUP | EPOLLRDHUP)) { // peer hang-up detected
 
@@ -188,12 +219,13 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
                         threads.execute([this, app_protocol, fd_of_events]() {
                             try {
                                 auto conn = find_peer_by_fd(fd_of_events);
+                                // handle the request under a certain application-layer protocol
                                 app_protocol(conn.chann.get(), conn.name);
                                 reenable_peer_by_fd(conn.chann->get_info().peer_fd);
                             } catch (peer_completion &e) {
                                 auto name = hangup_peer_by_fd(fd_of_events);
                                 fmt::print("client {} (fd:{}) disconnected during request handling.\n", name, fd_of_events);
-                            } catch (session_timeout &e) {
+                            } catch (io_timeout &e) {
                                 auto name = hangup_peer_by_fd(fd_of_events);
                                 fmt::print("client {} (fd:{}) io timeout during request handling.\n", name, fd_of_events);
                             }
@@ -207,7 +239,7 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
         }
 
         if (stopping)
-            fmt::print("done");
+            fmt::print("done\n");
     });
 }
 
