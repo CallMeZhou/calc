@@ -301,7 +301,7 @@ void handler(channel *channel, const string &session_name) {
     int       peer;
 
     try {
-        string keepAliveHeader = fmt::format("timeout={}", channel->get_timeout());
+        string keepAliveHeader = fmt::format("timeout={}", channel->get_info().idol_timeout);
         keep_alive = true;
             
         // receive and parse header

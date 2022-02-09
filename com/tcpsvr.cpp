@@ -12,7 +12,6 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <stdio.h>
-#include <sys/epoll.h>
 #include <sys/eventfd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -30,9 +29,12 @@ static void add_fd_to_epoll(int ep_fd, int new_fd, int events);
 static void update_fd_in_epoll(int ep_fd, int peer_fd, int events);
 static void remove_fd_from_epoll(int ep_fd, int peer_fd);
 
+static constexpr int EPOLL_TIMEOUT = 10;
+
 void tcp::add_new_peer(int peer_fd, const string &name) {
     scoped_lock lock(connection_map_lock);
     assert(connection_map.find(peer_fd) == connection_map.end());
+    add_fd_to_epoll(ep_fd, peer_fd, EPOLLIN | EPOLLRDHUP | EPOLLONESHOT);
     connection_map[peer_fd] = {name, shared_ptr<channel>(channel_from_fd(peer_fd))};
 }
 
@@ -43,14 +45,41 @@ tcp::connection &tcp::find_peer_by_fd(int peer_fd) {
     return conn->second;
 }
 
+void tcp::reenable_peer_by_fd(int peer_fd) {
+    scoped_lock lock(connection_map_lock);
+    auto conn = connection_map.find(peer_fd);
+    assert(conn != connection_map.end());
+    update_fd_in_epoll(ep_fd, conn->second.chann->get_info().peer_fd, EPOLLIN | EPOLLRDHUP | EPOLLONESHOT);
+    conn->second.chann->set_idol_start(chrono::steady_clock::now());
+}
+
 string tcp::hangup_peer_by_fd(int peer_fd) {
     scoped_lock lock(connection_map_lock);
     auto conn = connection_map.find(peer_fd);
     assert(conn != connection_map.end());
-    assert(conn->second.chann.use_count() == 1);
-    string name = conn->second.name;
-    connection_map.erase(conn);
+    string name;
+    tie(name, conn) = hangup_peer(conn);
     return name;
+}
+
+tuple<string, map<int, tcp::connection>::iterator> tcp::hangup_peer(map<int, tcp::connection>::iterator conn) {
+    assert(conn->second.chann.use_count() == 1);
+    remove_fd_from_epoll(ep_fd, conn->second.chann->get_info().peer_fd);
+    return {conn->second.name, connection_map.erase(conn)};
+}
+
+void tcp::refresh_peers(void) {
+    scoped_lock lock(connection_map_lock);
+    auto curr_time = chrono::steady_clock::now();
+    string name;
+    for (auto conn = connection_map.begin(); conn != connection_map.end();) {
+        auto &info = conn->second.chann->get_info();
+        if (chrono::duration_cast<chrono::seconds>(curr_time - info.idol_start).count() > info.idol_timeout) {
+            int fd = conn->second.chann->get_info().peer_fd;
+            tie(name, conn) = hangup_peer(conn);
+            fmt::print("client {} (fd:{}) idol timeout during request handling.\n", name, fd);
+        }
+    }
 }
 
 tcp::tcp(const string &serivce, function<channel *(int)> channel_factory)
@@ -113,11 +142,16 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
         bool stopping = false;
         while (!stopping) {
             epoll_event evs[max_epoll_events];
-            int nfds = epoll_wait(ep_fd, evs, max_epoll_events, -1);
+            int nfds = epoll_wait(ep_fd, evs, max_epoll_events, EPOLL_TIMEOUT);
 
-            if (-1 == nfds && errno != EINTR) {
-                fmt::print("epoll_wait() failed due to '{}', tcp server's main thread {} is exiting...", strerror(errno), pthread_self());
-                break;
+            if (-1 == nfds) {
+                if (errno == EINTR) {
+                    refresh_peers();
+                    continue;
+                } else {
+                    fmt::print("epoll_wait() failed due to '{}', tcp server's main thread {} is exiting...", strerror(errno), pthread_self());
+                    break;
+                }
             }
 
             for (int i = 0; i < nfds; i++) {
@@ -125,49 +159,43 @@ void tcp::online(function<void(channel *, const string &)> app_protocol, thread_
                 auto events = evs[i].events;
 
                 try {
-                    if (fd_of_events == quit_event) {
+                    if (fd_of_events == quit_event) { // server is quitting
 
                         puts("stopping main server loop...");
                         stopping = true;
                         break;
 
-                    } else if (fd_of_events == listen_sock) {
+                    } else if (fd_of_events == listen_sock) { // new peer arrived
 
+                        // accept peer
                         int peer_fd;
                         string conn_name;
                         tie(peer_fd, conn_name) = my_accept(listen_sock);
 
                         deferred close_peer_fd_if_except_thrown([peer_fd](void) { close(peer_fd); });
-
-                        //set_fd_nonblock(peer_fd);
-                        add_fd_to_epoll(ep_fd, peer_fd, EPOLLIN | EPOLLRDHUP | EPOLLONESHOT);
+                        // create channel object for peer (and save it in internal map)
                         add_new_peer(peer_fd, conn_name);
-
                         fmt::print("client {} accepted on fd:{}.\n", conn_name, peer_fd);
-
                         close_peer_fd_if_except_thrown.cancel();
 
-                    } else if (events & (EPOLLHUP | EPOLLRDHUP)) {
+                    } else if (events & (EPOLLHUP | EPOLLRDHUP)) { // peer hang-up detected
 
-                        remove_fd_from_epoll(ep_fd, fd_of_events);
                         auto name = hangup_peer_by_fd(fd_of_events);
                         fmt::print("client {} (fd:{}) disconnected.\n", name, fd_of_events);
 
-                    } else {
+                    } else { // peer requesting
 
-                        auto conn = find_peer_by_fd(fd_of_events);
-                        threads.execute([this, app_protocol, &conn]() {
+                        threads.execute([this, app_protocol, fd_of_events]() {
                             try {
+                                auto conn = find_peer_by_fd(fd_of_events);
                                 app_protocol(conn.chann.get(), conn.name);
-                                update_fd_in_epoll(ep_fd, conn.chann->get_fd(), EPOLLIN | EPOLLRDHUP | EPOLLONESHOT);
+                                reenable_peer_by_fd(conn.chann->get_info().peer_fd);
                             } catch (peer_completion &e) {
-                                int fd = conn.chann->get_fd();
-                                remove_fd_from_epoll(ep_fd, fd);
-                                auto name = hangup_peer_by_fd(fd);
-                                fmt::print("client {} (fd:{}) disconnected during request handling.\n", name, fd);
+                                auto name = hangup_peer_by_fd(fd_of_events);
+                                fmt::print("client {} (fd:{}) disconnected during request handling.\n", name, fd_of_events);
                             } catch (session_timeout &e) {
-                                // TODO: to be implemented
-                                assert(0);
+                                auto name = hangup_peer_by_fd(fd_of_events);
+                                fmt::print("client {} (fd:{}) io timeout during request handling.\n", name, fd_of_events);
                             }
                         });
 

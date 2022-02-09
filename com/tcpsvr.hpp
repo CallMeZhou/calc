@@ -1,4 +1,5 @@
 #pragma once
+#include <sys/epoll.h>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -6,7 +7,6 @@
 #include <thread>
 #include <functional>
 #include "channel.hpp"
-#include <sys/epoll.h>
 #include "thrdpool.hpp"
 
 namespace server {
@@ -40,7 +40,10 @@ private:
 
     void add_new_peer(int peer_fd, const string &name);
     connection& find_peer_by_fd(int peer_fd);
+    void reenable_peer_by_fd(int peer_fd);
     string hangup_peer_by_fd(int peer_fd);
+    tuple<string, map<int, connection>::iterator> hangup_peer(map<int, connection>::iterator conn);
+    void refresh_peers(void);
 
 public:
     /**
