@@ -75,7 +75,7 @@ static msgbuff_t::const_iterator receive_header(channel *channel, msgbuff_t &req
         } else if (recv_bytes < 0) {
             int e = errno;
             if (e == EWOULDBLOCK|| e == EAGAIN)
-                throw session_timeout();
+                throw io_timeout();
             else
                 throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
@@ -126,8 +126,7 @@ static tuple<string, string, string> parse_start_line(const header_t& header) {
 }
 
 /**
- * extracts information from the http header that the http protocol implementation
- * concers.
+ * extracts information from the http header that the http protocol cares about.
  * @param header the returned value of parse_header
  * @return a tuple containing the keep-alive and Content-Length
  */
@@ -183,7 +182,7 @@ static void receive_body(channel *channel, int content_length, msgbuff_t &reques
         } else if (recv_bytes < 0) {
             int e = errno;
             if (e == EWOULDBLOCK|| e == EAGAIN)
-                throw session_timeout();
+                throw io_timeout();
             else
                 throw handle_request_failure(500, fmt::format("Server internal error. recv() failed with {} when receiving request header.", errno));
         }
@@ -281,12 +280,13 @@ static tuple<controller, args_t> find_controller(const string &method, const str
 }
 
 /**
- * [API] the http protocol handling function. application system connects this API
- * to a initialized tcp server object. when a client connection is accepted, the 
- * tcp server will create a thread and run this function in the thread.
+ * [API] the http protocol handling function. the application system connects this API 
+ * to an initialized tcp server object. when a request if received from a client, the 
+ * tcp server picks up a thread in the pool and runs this function. One execution only
+ * handles request.
  */
 void handler(channel *channel, const string &session_name) {
-    fmt::print("Client {} was accepted by http session {}.\n", session_name, pthread_self());
+    // TODO debug_log -> Client {session_name} was accepted by thread {pthread_self()}.
 
     msgbuff_t request;
     header_t  request_header;
@@ -300,37 +300,35 @@ void handler(channel *channel, const string &session_name) {
     int       peer;
 
     try {
-        string keepAliveHeader = fmt::format("timeout={}", channel->get_timeout());
+        string keepAliveHeader = fmt::format("timeout={}", channel->get_info().idol_timeout);
         keep_alive = true;
-        while (keep_alive) {
             
-            // receive and parse header
-            auto header_end_pos = receive_header(channel, request);
-            request_header = parse_header(request, header_end_pos);
-            request.erase(request.begin(), header_end_pos); // not quite necessary...
+        // receive and parse header
+        auto header_end_pos = receive_header(channel, request);
+        request_header = parse_header(request, header_end_pos);
+        request.erase(request.begin(), header_end_pos); // not quite necessary...
 
-            // handle the start line of the request
-            tie(method, url, version) = parse_start_line(request_header);
-            tie(query_name, query_args) = controller_name_args(url);
+        // handle the start line of the request
+        tie(method, url, version) = parse_start_line(request_header);
+        tie(query_name, query_args) = controller_name_args(url);
 
-            // find the controller function
-            auto controller = find_controller(method, query_name);
+        // find the controller function
+        auto controller = find_controller(method, query_name);
 
-            // receive request body
-            tie(keep_alive, content_length) = process_header(request_header);
-            receive_body(channel, content_length, request);
+        // receive request body
+        tie(keep_alive, content_length) = process_header(request_header);
+        receive_body(channel, content_length, request);
 
-            // call the application system to handle the request
-            tie(response_header, response) = get<0>(controller)(request, get<1>(controller), query_args, request_header);
+        // call the application system to handle the request
+        tie(response_header, response) = get<0>(controller)(request, get<1>(controller), query_args, request_header);
 
-            // send back response
-            response_header["Content-Length"] = fmt::format("{}", response.size());
-            response_header["Access-Control-Allow-Origin"] = "*";
-            if (keep_alive) response_header["Keep-Alive"] = keepAliveHeader;
-            send_response(channel, format_header(response_header));
-            send_response(channel, response);
+        // send back response
+        response_header["Content-Length"] = fmt::format("{}", response.size());
+        response_header["Access-Control-Allow-Origin"] = "*";
+        if (keep_alive) response_header["Keep-Alive"] = keepAliveHeader;
+        send_response(channel, format_header(response_header));
+        send_response(channel, response);
 
-        } // end of while (keep_alive)...
     } catch (handle_request_failure &e) {
         response_header["Content-Length"] = "0";
         send_response(channel, format_header(response_header, e.what()));
@@ -338,16 +336,14 @@ void handler(channel *channel, const string &session_name) {
         response_header["Content-Length"] = "0";
         response_header["Location"] = e.get_url();
         send_response(channel, format_header(response_header, e.get_msg()));
-    } catch (peer_completion&) {
-
-    } catch (session_timeout&) {
-
+    } catch (peer_completion &e) {
+        throw e;
+    } catch (io_timeout &e) {
+        throw e;
     } catch (...) {
         response_header["Content-Length"] = "0";
         send_response(channel, format_header(response_header, "500 Unexpected server internal error."));
     }
-
-    fmt::print("http session {} exited.\n", pthread_self());
 }
 
 }

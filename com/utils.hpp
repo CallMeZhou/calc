@@ -75,6 +75,6 @@ std::string find_arg(const M &args, const std::string &key, const std::string &d
  */
 template<typename FUNC, typename... ARGS> struct auto_executor { auto_executor(FUNC func, ARGS ... args) { func(args ...); } };
 
-struct deferred { std::function<void(void)> action; deferred(decltype(action) action) : action(action) {} ~deferred() { if (action) action(); } };
+struct deferred { std::function<void(void)> action; deferred(decltype(action) action) : action(action) {} ~deferred() { if (action) action(); } void cancel(void) { action = nullptr; } };
 
 }
