@@ -159,10 +159,6 @@ tcp::~tcp() {
     }
 }
 
-//-------------------------------------------------------------
-//>>>>>>>> TODO: peer_fd timeout and remove from epoll <<<<<<<<
-//-------------------------------------------------------------
-
 void tcp::online(function<void(channel *, const string &)> app_protocol, thread_pool &threads) {
     assert(listen_sock != -1);
     assert(!listener.joinable());
