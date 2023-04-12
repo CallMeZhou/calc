@@ -1,7 +1,3 @@
-[submodule "keypress"]
-	path = keypress
-	url = git@github.com:MichaelDipperstein/keypress.git
-	branch = master
 [submodule "stb"]
 	path = stb
 	url = git@github.com:nothings/stb.git

@@ -3,14 +3,11 @@
 #include <memory>
 #include <stdexcept>
 #include <filesystem>
+#include <signal.h>
 #include "fmt/core.h"
 #include "clipp.h"
 #include "libcom.hpp"
 #include "siteconf.hpp"
-
-extern "C" {
-    #include "keypress.h"
-}
 
 using namespace std;
 using namespace filesystem;
@@ -18,6 +15,11 @@ using namespace clipp;
 using namespace server;
 using namespace server_utils;
 using namespace network_channel;
+
+static event main_thread_keeper;
+void sigint_handler(int) {
+    main_thread_keeper.signal();
+}
 
 int main(int argc, char* argv[]) {
     string http_port = "1080";
@@ -43,6 +45,8 @@ int main(int argc, char* argv[]) {
         cout << make_man_page(cli, path(argv[0]).filename()) << endl;
         return 0;
     }
+
+    signal(SIGINT, sigint_handler);
 
     try {
         puts("CALC http server at your service.");
@@ -75,9 +79,10 @@ int main(int argc, char* argv[]) {
             puts("HTTPS server is online.");
         }
 
-        puts("All servers are up online, press any key to stop...");
-        keypress(KP_ECHO_OFF);
-
+        puts("All servers are up online, press Ctrl+C or send SIGINT to stop...");
+        main_thread_keeper.wait();
+        puts("");
+ 
         if (http) {
             puts("Stopping HTTP server...");
             http->offline();
@@ -94,6 +99,8 @@ int main(int argc, char* argv[]) {
         fmt::print(stderr, "FAILED: {}.\n", e.what());
     }
 
-    printf("All servers exited.\n");
+    puts("All servers exited.");
+    puts("CALC http server exited.");
+    puts("Bye.");
     return 0;
 }

@@ -3,7 +3,6 @@ file(GLOB keypress ${CALC_SOURCE_DIR}/keypress/keypress.c)
 add_executable (svr ${srcs} ${keypress})
 target_include_directories(svr PUBLIC 
     ${CALC_SOURCE_DIR}/com 
-    ${CALC_SOURCE_DIR}/keypress 
     ${CALC_SOURCE_DIR}/stb 
     ${CALC_SOURCE_DIR}/picojson
     ${CALC_SOURCE_DIR}/clipp/include)
