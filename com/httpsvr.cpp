@@ -86,7 +86,7 @@ static msgbuff_t::const_iterator receive_header(channel *channel, msgbuff_t &req
         header_end = search(insertion_point, request.end(), CRCR.begin(), CRCR.end());
     }
 
-    return header_end += 4; // include the "\r\n\r\n" in the header
+    return header_end += CRCR.size(); // include the "\r\n\r\n" in the header
 }
 
 /**
@@ -102,7 +102,7 @@ static header_t parse_header(const msgbuff_t &request, msgbuff_t::const_iterator
 
     auto first_line_end = search(request.begin(), request.end(), CR.begin(), CR.end());
     header[""] = string(request.begin().base(), first_line_end.base());
-    first_line_end += 2;
+    first_line_end += CR.size();
 
     auto match_begin = cregex_iterator(first_line_end.base(), header_end.base(), HEADER_PATTERN);
     auto match_end   = cregex_iterator();
@@ -170,8 +170,9 @@ static tuple<string, args_t> controller_name_args(const string &url) {
 
 /**
  * it is a continuation of receive_header receiving the rest of the http reuest.
- * @param peer socket fd
+ * @param channel the network channel for communication
  * @param content_length the returned value of process_header
+ * @param request the message buffer to reveive the data
  */
 static void receive_body(channel *channel, int content_length, msgbuff_t &request) {
     while(request.size() < content_length) { // contentLength is set by processHeader()
@@ -219,23 +220,13 @@ static string format_header(const header_t &header, const string &status = "") {
 }
 
 /**
- * sends http response header
- * @param peer the socket fd
- * @param header the k-v map form of the http response header
+ * sends response data
+ * @param channel the network channel for communication
+ * @param data a random-access container having the data to be sent
  */
-static void send_response(channel *channel, const string &header) {
-    if(channel->send(header.c_str(), header.length()) == 0) {
-        // TODO handle error
-    }
-}
-
-/**
- * sends http response body
- * @param peer the socket fd
- * @param body the response body
- */
-static void send_response(channel *channel, const msgbuff_t &body) {
-    if(channel->send(&body[0], body.size()) == 0) {
+template<typename T>
+static void send_response(channel *channel, const T &data) {
+    if(channel->send(&data[0], data.size()) == 0) {
         // TODO handle error
     }
 }
@@ -306,7 +297,7 @@ void handler(channel *channel, const string &session_name) {
         // receive and parse header
         auto header_end_pos = receive_header(channel, request);
         request_header = parse_header(request, header_end_pos);
-        request.erase(request.begin(), header_end_pos); // not quite necessary...
+        request.erase(request.begin(), header_end_pos); // not quite necessary...TODO pass the request handler the begin/end iterators instead of the whole message buffer
 
         // handle the start line of the request
         tie(method, url, version) = parse_start_line(request_header);
@@ -314,6 +305,9 @@ void handler(channel *channel, const string &session_name) {
 
         // find the controller function
         auto controller = find_controller(method, query_name);
+
+        // TODO authorisation should be done before receiving the whole 
+        // request body. we can save some time if the client is unauthorised
 
         // receive request body
         tie(keep_alive, content_length) = process_header(request_header);
